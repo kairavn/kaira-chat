@@ -1,0 +1,417 @@
+# Component Examples
+
+This page demonstrates all the available MDX components for the Kaira Chat SDK documentation.
+
+## Syntax Highlighting
+
+All code blocks are automatically highlighted using **Shiki** at build time. Supports both light and dark themes.
+
+### TypeScript
+
+```typescript
+import { ChatEngine } from '@kaira/chat-core';
+import { PollingTransport } from '@kaira/chat-transport-polling';
+
+const engine = new ChatEngine({
+  transport: new PollingTransport({
+    intervalMs: 1000,
+    poll: async () => [],
+    send: async () => {},
+  }),
+});
+
+engine.on('message:received', (event) => {
+  console.log('New message:', event.message);
+});
+
+await engine.sendMessage('demo-conversation', {
+  content: 'Hello, world!',
+  type: 'text',
+});
+```
+
+### JavaScript
+
+```javascript
+import { ChatEngine } from '@kaira/chat-core';
+import { PollingTransport } from '@kaira/chat-transport-polling';
+
+const engine = new ChatEngine({
+  transport: new PollingTransport({
+    intervalMs: 1000,
+    poll: async () => [],
+  }),
+});
+
+engine.on('connection:state', (event) => {
+  console.log('Connection:', event.state);
+});
+
+async function sendHello() {
+  await engine.connect();
+  await engine.sendMessage('demo-conversation', {
+    type: 'text',
+    content: 'Hello, world!',
+  });
+}
+```
+
+### JSON
+
+```json
+{
+  "name": "@kaira/chat-core",
+  "version": "1.0.0",
+  "description": "Core chat SDK",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "eventemitter3": "^5.0.0"
+  }
+}
+```
+
+### Bash
+
+```bash
+# Install the package
+npm install @kaira/chat-core
+
+# Or with yarn
+yarn add @kaira/chat-core
+
+# Or with pnpm
+pnpm add @kaira/chat-core
+```
+
+### CSS
+
+```css
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #ffffff;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  max-width: 70%;
+}
+```
+
+## Badges
+
+Use badges to highlight status, versions, or labels:
+
+<Badge>Default</Badge> <Badge variant="secondary">Secondary</Badge>
+<Badge variant="outline">Outline</Badge>
+
+<Badge variant="info">Info</Badge> <Badge variant="warning">Warning</Badge>
+<Badge variant="success">Success</Badge>
+
+<Badge variant="beta">Beta</Badge> <Badge variant="new">New</Badge>
+
+## Callouts
+
+Callouts are used to highlight important information:
+
+<Callout
+  type="info"
+  title="Information"
+>
+  This is an informational callout. Use it to provide helpful context or additional details.
+</Callout>
+
+<Callout
+  type="warning"
+  title="Warning"
+>
+  This is a warning callout. Use it to alert users about potential issues or important
+  considerations.
+</Callout>
+
+<Callout
+  type="error"
+  title="Error"
+>
+  This is an error callout. Use it to highlight critical errors or things to avoid.
+</Callout>
+
+<Callout
+  type="success"
+  title="Success"
+>
+  This is a success callout. Use it to confirm successful operations or best practices.
+</Callout>
+
+<Callout type="info">Callouts can also be used without a title for simpler messages.</Callout>
+
+## Cards
+
+Cards are great for linking to related documentation:
+
+<CardGroup cols={2}>
+  <Card
+    title="Core API"
+    description="Learn about the core chat engine, events, and messaging system."
+    href="/core-api/"
+  />
+  <Card
+    title="React Integration"
+    description="Use Kaira Chat with React hooks and components."
+    href="/react/"
+  />
+  <Card
+    title="Plugin System"
+    description="Extend functionality with custom plugins."
+    href="/plugins/"
+  />
+  <Card
+    title="Examples"
+    description="See real-world usage examples and patterns."
+    href="/examples/"
+  />
+</CardGroup>
+
+Cards can also be displayed in a 3-column layout:
+
+<CardGroup cols={3}>
+  <Card
+    title="Transport API"
+    description="WebSocket, polling, and SSE support."
+  />
+  <Card
+    title="Storage API"
+    description="Flexible storage abstractions."
+  />
+  <Card
+    title="Streaming"
+    description="Real-time streaming capabilities."
+  />
+</CardGroup>
+
+## Steps
+
+Use steps for sequential instructions:
+
+<Steps>
+  <Step number={1} title="Install the Package">
+    Install the core package using your preferred package manager:
+
+    ```bash
+    npm install @kaira/chat-core
+    ```
+
+  </Step>
+  <Step number={2} title="Configure the Engine">
+    Create a chat engine instance with your configuration:
+
+    ```typescript
+    import { ChatEngine } from '@kaira/chat-core';
+
+    const engine = new ChatEngine({
+      transport: new MyTransport(),
+      storage: new MyStorage(),
+    });
+    ```
+
+  </Step>
+  <Step number={3} title="Connect and Chat">
+    Connect to your backend and start sending messages:
+
+    ```typescript
+    await engine.connect();
+    await engine.sendMessage('demo-conversation', {
+      type: 'text',
+      content: 'Hello, world!',
+    });
+    ```
+
+  </Step>
+</Steps>
+
+## Tabs
+
+Use tabs for alternative code examples or content:
+
+<Tabs defaultValue="npm">
+  <TabsList>
+    <Tab
+      value="npm"
+      title="npm"
+    >
+      npm install @kaira/chat-core
+    </Tab>
+    <Tab
+      value="yarn"
+      title="yarn"
+    >
+      yarn add @kaira/chat-core
+    </Tab>
+    <Tab
+      value="pnpm"
+      title="pnpm"
+    >
+      pnpm add @kaira/chat-core
+    </Tab>
+  </TabsList>
+</Tabs>
+
+Tabs also work with code blocks:
+
+<Tabs defaultValue="javascript">
+  <TabsList>
+    <Tab value="javascript" title="JavaScript">
+      ```javascript
+      import { ChatEngine } from '@kaira/chat-core';
+      import { PollingTransport } from '@kaira/chat-transport-polling';
+
+      const engine = new ChatEngine({
+        transport: new PollingTransport({
+          poll: async () => [],
+        }),
+      });
+
+      engine.on('message:received', (event) => {
+        console.log('Received:', event.message);
+      });
+      ```
+    </Tab>
+    <Tab value="typescript" title="TypeScript">
+      ```typescript
+      import type { Message } from '@kaira/chat-core';
+      import { ChatEngine } from '@kaira/chat-core';
+      import { PollingTransport } from '@kaira/chat-transport-polling';
+
+      const engine = new ChatEngine({
+        transport: new PollingTransport({
+          poll: async () => [],
+        }),
+      });
+
+      engine.on('message:received', (event) => {
+        const msg: Message = event.message;
+        console.log('Received:', msg);
+      });
+      ```
+    </Tab>
+
+  </TabsList>
+</Tabs>
+
+## Inline Code
+
+Use `inline code` for referencing variables, functions, or file names within text.
+
+## Code Block Component
+
+For advanced usage with filenames and copy buttons:
+
+<CodeBlock language="typescript" filename="chat-client.ts">
+  {`// This code block shows a filename header
+import { ChatEngine } from '@kaira/chat-core';
+
+export const engine = new ChatEngine();`}
+</CodeBlock>
+
+## Tables
+
+Tables are styled automatically:
+
+| Property    | Type                        | Required | Description                          |
+| ----------- | --------------------------- | -------- | ------------------------------------ |
+| `id`        | `string`                    | Yes      | Unique identifier for the message    |
+| `type`      | `MessageType`               | Yes      | Message discriminator                |
+| `sender`    | `Participant`               | Yes      | Message sender                       |
+| `timestamp` | `number`                    | Yes      | Unix timestamp in milliseconds       |
+| `status`    | `MessageStatus`             | Yes      | Delivery lifecycle status            |
+| `metadata`  | `MessageMetadata`           | No       | Optional metadata (e.g. clientNonce) |
+
+## Lists
+
+### Unordered Lists
+
+- First item with some content
+- Second item that might be longer and span multiple lines
+- Third item with nested items:
+  - Nested item one
+  - Nested item two
+    - Deeply nested item
+- Fourth item
+
+### Ordered Lists
+
+1. First step in the process
+2. Second step with more detail
+3. Third step that includes:
+   - A nested bullet point
+   - Another nested point
+4. Final step to complete the task
+
+## Typography
+
+### Paragraphs
+
+Regular paragraph text flows naturally and supports **bold text**, _italic text_, and ~~strikethrough~~. You can also use [links to other pages](/architecture/) and reference `inline code`.
+
+### Blockquotes
+
+> Blockquotes are useful for highlighting important quotes or excerpts from other documentation. They stand out visually from regular paragraph text.
+
+### Horizontal Rules
+
+Use horizontal rules to separate sections:
+
+---
+
+## Combining Components
+
+Components can be combined for powerful documentation patterns:
+
+<Callout
+  type="info"
+  title="Pro Tip"
+>
+  Use <code>CardGroup</code> inside tabs to provide context-specific navigation options.
+</Callout>
+
+<Tabs defaultValue="basic">
+  <TabsList>
+    <Tab
+      value="basic"
+      title="Basic"
+    >
+      <CardGroup cols={2}>
+        <Card
+          title="Getting Started"
+          description="Learn the basics of Kaira Chat."
+          href="/quick-start/"
+        />
+        <Card
+          title="Core Concepts"
+          description="Understand the architecture."
+          href="/architecture/"
+        />
+      </CardGroup>
+    </Tab>
+    <Tab
+      value="advanced"
+      title="Advanced"
+    >
+      <CardGroup cols={2}>
+        <Card
+          title="Custom Plugins"
+          description="Build your own plugins."
+          href="/plugins/"
+        />
+        <Card
+          title="Middleware"
+          description="Extend with middleware."
+          href="/middleware/"
+        />
+      </CardGroup>
+    </Tab>
+  </TabsList>
+</Tabs>

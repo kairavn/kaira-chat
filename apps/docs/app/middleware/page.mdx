@@ -1,0 +1,58 @@
+# Middleware
+
+Middleware runs in order and receives immutable context for each event.
+
+## Contract
+
+```ts
+export interface MiddlewareContext<E extends ChatEventType = ChatEventType> {
+  readonly engine: IChatEngine;
+  readonly event: ChatEvent<E>;
+}
+
+export type NextFn = (modifiedEvent?: ChatEvent) => Promise<ChatEvent>;
+export type Middleware = (ctx: MiddlewareContext, next: NextFn) => Promise<ChatEvent>;
+```
+
+## Pipeline Behavior
+
+```text
+event -> middleware[0] -> middleware[1] -> ... -> middleware[n] -> final event
+
+- pass no argument to next() to forward event
+- pass next(modifiedEvent) to replace event downstream
+- skip next() to short-circuit
+```
+
+## Message Validation Middleware
+
+```ts
+import type { ChatEvent, Middleware } from '@kaira/chat-core';
+
+import { createChatError } from '@kaira/chat-core';
+
+export const messageValidationMiddleware: Middleware = async (ctx, next) => {
+  if (ctx.event.type !== 'message:sent') {
+    return next();
+  }
+
+  const message = ctx.event.message;
+  const isText = message.type === 'text';
+  const hasText =
+    isText && typeof message.content === 'string' && message.content.trim().length > 0;
+
+  if (!hasText) {
+    throw createChatError('validation', 'Text message cannot be empty');
+  }
+
+  const normalizedEvent: ChatEvent<'message:sent'> = {
+    ...ctx.event,
+    message: {
+      ...message,
+      content: message.content.trim(),
+    },
+  };
+
+  return next(normalizedEvent);
+};
+```

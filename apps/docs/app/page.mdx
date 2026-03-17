@@ -1,0 +1,36 @@
+# Introduction
+
+The Kaira Chat SDK is a modular toolkit for building chat experiences with predictable runtime behavior, pluggable infrastructure, and framework-friendly integrations.
+
+It is split into focused packages:
+
+- `@kaira/chat-core`: engine, events, middleware, plugins, transport/storage contracts
+- `@kaira/chat-react`: React provider and hooks
+- `@kaira/chat-ui`: reusable UI primitives
+- `@kaira/chat-transport-polling`: generic polling transport
+- `@kaira/chat-provider-dit`: provider transport built on polling
+
+## Goals
+
+1. Keep domain logic framework-agnostic.
+2. Let teams swap transport and storage implementations.
+3. Support extension via plugins, middleware, and custom events.
+4. Make streaming AI responses first-class.
+5. Keep React integration minimal and typed.
+
+## Key Features
+
+- **Modular architecture**: clear separation between runtime, UI, and adapters.
+- **Transport abstraction**: `ITransport` for WebSocket, polling, SSE, native bridge, etc.
+- **Storage abstraction**: `IStorage` for in-memory, local storage, server DBs, and APIs.
+- **Plugin system**: installable lifecycle extensions with `install()` / `destroy()`.
+- **Middleware pipeline**: immutable event interception before send.
+- **Streaming lifecycle**: start/chunk/end/error helpers for AI messages.
+- **React integration**: `ChatProvider` and hooks for messages, send, and streaming.
+
+## Start Here
+
+- New to the SDK: go to [Quick Start](/quick-start).
+- Need architecture context: go to [Architecture Overview](/architecture).
+- Building custom adapters: go to [Transport API](/transport) and [Storage API](/storage).
+- Extending behavior: go to [Plugin System](/plugins) and [Middleware](/middleware).

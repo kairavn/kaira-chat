@@ -1,0 +1,573 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  /* Colors - Light mode (default) */
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #0a0a0a;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0a0a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --ring: #0a0a0a;
+  --radius: 0.5rem;
+
+  /* Docs-specific colors */
+  --docs-nav-bg: #fafafa;
+  --docs-sidebar-border: #e5e5e5;
+  --docs-toc-border: #e5e5e5;
+  --docs-code-bg: #f5f5f5;
+  --docs-code-border: #e5e5e5;
+  --docs-link: #2563eb;
+  --docs-link-hover: #1d4ed8;
+
+  /* Syntax highlighting (light) */
+  --shiki-foreground: #24292e;
+  --shiki-background: #f6f8fa;
+  --shiki-token-constant: #005cc5;
+  --shiki-token-string: #22863a;
+  --shiki-token-comment: #6a737d;
+  --shiki-token-keyword: #d73a49;
+  --shiki-token-parameter: #e36209;
+  --shiki-token-function: #6f42c1;
+  --shiki-token-string-expression: #22863a;
+  --shiki-token-punctuation: #24292e;
+  --shiki-token-link: #032f62;
+}
+
+[data-theme='dark'] {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --muted: #171717;
+  --muted-foreground: #a3a3a3;
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+  --popover: #0a0a0a;
+  --popover-foreground: #fafafa;
+  --border: #262626;
+  --input: #262626;
+  --primary: #fafafa;
+  --primary-foreground: #171717;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --ring: #d4d4d4;
+  --radius: 0.5rem;
+
+  /* Docs-specific colors */
+  --docs-nav-bg: #0a0a0a;
+  --docs-sidebar-border: #262626;
+  --docs-toc-border: #262626;
+  --docs-code-bg: #171717;
+  --docs-code-border: #262626;
+  --docs-link: #60a5fa;
+  --docs-link-hover: #93c5fd;
+
+  /* Syntax highlighting (dark) */
+  --shiki-foreground: #e1e4e8;
+  --shiki-background: #0d1117;
+  --shiki-token-constant: #79c0ff;
+  --shiki-token-string: #a5d6ff;
+  --shiki-token-comment: #8b949e;
+  --shiki-token-keyword: #ff7b72;
+  --shiki-token-parameter: #ffa657;
+  --shiki-token-function: #d2a8ff;
+  --shiki-token-string-expression: #a5d6ff;
+  --shiki-token-punctuation: #e1e4e8;
+  --shiki-token-link: #a5d6ff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius));
+  --radius-lg: calc(var(--radius) + 4px);
+
+  /* Custom docs colors */
+  --color-docs-nav-bg: var(--docs-nav-bg);
+  --color-docs-sidebar-border: var(--docs-sidebar-border);
+  --color-docs-toc-border: var(--docs-toc-border);
+  --color-docs-code-bg: var(--docs-code-bg);
+  --color-docs-code-border: var(--docs-code-border);
+  --color-docs-link: var(--docs-link);
+  --color-docs-link-hover: var(--docs-link-hover);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family:
+    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+  opacity: 0.3;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  opacity: 0.5;
+}
+
+/* Typography (prose-like) */
+.prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: var(--docs-link);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--muted-foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--foreground);
+  --tw-prose-pre-bg: var(--docs-code-bg);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+
+  max-width: none;
+  color: var(--foreground);
+}
+
+.prose h1 {
+  font-size: 2.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  letter-spacing: -0.025em;
+  scroll-margin-top: 6rem;
+}
+
+.prose h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+  scroll-margin-top: 6rem;
+}
+
+.prose h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.025em;
+  scroll-margin-top: 6rem;
+}
+
+.prose h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  scroll-margin-top: 6rem;
+}
+
+.prose h5,
+.prose h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  scroll-margin-top: 6rem;
+}
+
+.prose p {
+  margin-bottom: 1.25rem;
+  line-height: 1.75;
+}
+
+.prose ul,
+.prose ol {
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.prose ul {
+  list-style-type: disc;
+}
+
+.prose ol {
+  list-style-type: decimal;
+}
+
+.prose li {
+  margin-bottom: 0.5rem;
+}
+
+.prose li > ul,
+.prose li > ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose pre {
+  background-color: var(--docs-code-bg);
+  border: 1px solid var(--docs-code-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+}
+
+.prose code {
+  background-color: var(--docs-code-bg);
+  border: 1px solid var(--docs-code-border);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.875em;
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas,
+    monospace;
+}
+
+.prose pre code {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+  display: block;
+}
+
+/* Ensure code blocks inside custom CodeBlock component preserve formatting */
+.prose [data-code-block] pre,
+.prose [data-code-block] code {
+  white-space: pre !important;
+  word-wrap: normal !important;
+  word-break: normal !important;
+}
+
+.prose a {
+  color: var(--docs-link);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.prose a:hover {
+  color: var(--docs-link-hover);
+  text-decoration: underline;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.prose th {
+  background-color: var(--muted);
+  font-weight: 600;
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--border);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-bottom: 1.25rem;
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+/* Anchor links */
+.anchor-link {
+  opacity: 0;
+  margin-left: 0.5rem;
+  text-decoration: none;
+  color: var(--muted-foreground);
+  transition: opacity 0.15s ease;
+}
+
+h1:hover .anchor-link,
+h2:hover .anchor-link,
+h3:hover .anchor-link,
+h4:hover .anchor-link {
+  opacity: 1;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--docs-link);
+  color: white;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--docs-link);
+  outline-offset: 2px;
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   SHIKI SYNTAX HIGHLIGHTING
+   ============================================ */
+
+/* Base Shiki code block styling */
+figure[data-rehype-pretty-code-figure] {
+  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--docs-code-border);
+  background-color: var(--docs-code-bg);
+  overflow: hidden;
+}
+
+figure[data-rehype-pretty-code-figure] pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  background-color: transparent !important;
+  white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+}
+
+figure[data-rehype-pretty-code-figure] code {
+  display: grid;
+  background-color: transparent !important;
+  font-family:
+    var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas,
+    monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  white-space: pre;
+  word-wrap: normal;
+  word-break: normal;
+}
+
+/* CRITICAL: Apply Shiki colors from CSS variables */
+/* Shiki outputs colors as inline styles with --shiki-light and --shiki-dark variables */
+/* We don't use !important to avoid conflicts with Shiki's inline styles */
+
+/* Light mode - use --shiki-light colors */
+[data-theme='light'] figure[data-rehype-pretty-code-figure] [data-line] span,
+[data-theme='light'] figure[data-rehype-pretty-code-figure] code span {
+  color: var(--shiki-light, inherit);
+}
+
+/* Dark mode - use --shiki-dark colors */
+[data-theme='dark'] figure[data-rehype-pretty-code-figure] [data-line] span,
+[data-theme='dark'] figure[data-rehype-pretty-code-figure] code span {
+  color: var(--shiki-dark, inherit);
+}
+
+/* Default (no theme) - use light colors */
+figure[data-rehype-pretty-code-figure] [data-line] span,
+figure[data-rehype-pretty-code-figure] code span {
+  color: var(--shiki-light, inherit);
+}
+
+/* Line styling */
+figure[data-rehype-pretty-code-figure] [data-line] {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-left: 2px solid transparent;
+}
+
+/* Line highlighting */
+figure[data-rehype-pretty-code-figure] .line-highlighted {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left-color: #3b82f6;
+}
+
+[data-theme='dark'] figure[data-rehype-pretty-code-figure] .line-highlighted {
+  background-color: rgba(96, 165, 250, 0.15);
+  border-left-color: #60a5fa;
+}
+
+/* Character highlighting */
+figure[data-rehype-pretty-code-figure] .chars-highlighted {
+  background-color: rgba(59, 130, 246, 0.2);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0;
+}
+
+[data-theme='dark'] figure[data-rehype-pretty-code-figure] .chars-highlighted {
+  background-color: rgba(96, 165, 250, 0.25);
+}
+
+/* Line numbers (if enabled) */
+figure[data-rehype-pretty-code-figure] [data-line-numbers] {
+  counter-reset: line;
+}
+
+figure[data-rehype-pretty-code-figure] [data-line-numbers] > [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 1.8rem;
+  margin-right: 1rem;
+  text-align: right;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+/* Code block with title/caption */
+figure[data-rehype-pretty-code-figure] figcaption {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--docs-code-border);
+  background-color: var(--muted);
+}
+
+/* Language indicator in top-right - only on pre element */
+figure[data-rehype-pretty-code-figure] pre[data-language]::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  z-index: 5;
+  transition: opacity 0.2s ease;
+}
+
+/* Hide language indicator when hovering (copy button appears) */
+figure[data-rehype-pretty-code-figure]:hover pre[data-language]::before {
+  opacity: 0;
+}
+
+figure[data-rehype-pretty-code-figure] pre[data-language] {
+  position: relative;
+}
+
+/* Copy button for Shiki code blocks */
+figure[data-rehype-pretty-code-figure] {
+  position: relative;
+}
+
+.shiki-copy-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+/* Show on hover - both CSS hover and JS-controlled */
+figure[data-rehype-pretty-code-figure]:hover .shiki-copy-button,
+.shiki-copy-button:focus {
+  opacity: 1;
+}
+
+.shiki-copy-button:hover {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}

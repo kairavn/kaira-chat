@@ -1,0 +1,56 @@
+# Plugin System
+
+Plugins extend `ChatEngine` behavior without changing engine internals.
+
+## Lifecycle Contract
+
+```ts
+export interface ChatPlugin {
+  readonly name: string;
+  readonly version: string;
+  install(engine: IChatEngine): void | Promise<void>;
+  destroy?(): void | Promise<void>;
+}
+```
+
+- `install(engine)` runs when plugin is registered and engine connects.
+- `destroy()` runs during `engine.disconnect()`.
+
+## Message Logger Plugin Example
+
+```ts
+import type { ChatPlugin, IChatEngine, Unsubscribe } from '@kaira/chat-core';
+
+export function createMessageLoggerPlugin(): ChatPlugin {
+  let unsubscribeSent: Unsubscribe | undefined;
+  let unsubscribeReceived: Unsubscribe | undefined;
+
+  return {
+    name: 'message-logger',
+    version: '1.0.0',
+    install(engine: IChatEngine): void {
+      unsubscribeSent = engine.on('message:sent', (event) => {
+        console.log('[sent]', event.message.id, event.message.type);
+      });
+      unsubscribeReceived = engine.on('message:received', (event) => {
+        console.log('[received]', event.message.id, event.message.type);
+      });
+    },
+    destroy(): void {
+      unsubscribeSent?.();
+      unsubscribeReceived?.();
+    },
+  };
+}
+```
+
+## Registration
+
+```ts
+const engine = new ChatEngine({
+  plugins: [createMessageLoggerPlugin()],
+});
+
+// or later
+engine.use(createMessageLoggerPlugin());
+```

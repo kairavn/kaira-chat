@@ -1,0 +1,66 @@
+# Streaming API
+
+Streaming helpers let you model token/chunk generation from AI providers.
+
+## Helper Methods
+
+```ts
+emitStreamStart(messageId: string, conversationId: string): void;
+emitStreamChunk(messageId: string, chunk: string, accumulated: string): void;
+emitStreamEnd(message: Message & { type: "ai" }): Promise<void>;
+emitStreamError(messageId: string, error: ChatError): void;
+```
+
+## Lifecycle
+
+```text
+emitStreamStart
+  -> emitStreamChunk (repeat N times)
+  -> emitStreamEnd
+or
+  -> emitStreamError
+```
+
+## AI Streaming Example
+
+```ts
+import type { ChatEngine } from '@kaira/chat-core';
+
+import { createChatError } from '@kaira/chat-core';
+
+export async function streamAssistantReply(
+  engine: ChatEngine,
+  params: {
+    readonly conversationId: string;
+    readonly messageId: string;
+    readonly chunks: AsyncIterable<string>;
+  },
+): Promise<void> {
+  const { conversationId, messageId, chunks } = params;
+  engine.emitStreamStart(messageId, conversationId);
+
+  let accumulated = '';
+  try {
+    for await (const chunk of chunks) {
+      accumulated += chunk;
+      engine.emitStreamChunk(messageId, chunk, accumulated);
+    }
+
+    await engine.emitStreamEnd({
+      id: messageId,
+      conversationId,
+      sender: { id: 'assistant', role: 'assistant' },
+      timestamp: Date.now(),
+      status: 'sent',
+      type: 'ai',
+      content: accumulated,
+      streamState: 'complete',
+    });
+  } catch (error: unknown) {
+    engine.emitStreamError(
+      messageId,
+      createChatError('transport', 'AI streaming failed', { cause: error }),
+    );
+  }
+}
+```

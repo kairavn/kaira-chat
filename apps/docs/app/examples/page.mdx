@@ -1,0 +1,169 @@
+# Examples
+
+## 1) Next.js Demo
+
+> **Security note:** Never pass API keys via `NEXT_PUBLIC_*` environment
+> variables — they are inlined into client bundles and visible to anyone.
+> Keep provider credentials on the server and proxy chat operations through
+> Route Handlers.
+
+**Recommended pattern in this repo:**
+
+1. Server route layer owns `DitTransport` and server-only credentials.
+2. Client runtime uses `ChatProvider` with a client `ChatEngine` backed by `PollingTransport`.
+3. Client transport talks to `/api/chat/events` and `/api/chat/messages`.
+
+```tsx
+// components/chat/ChatRuntimeProvider.tsx
+'use client';
+
+import type { JSX, ReactNode } from 'react';
+
+import { ChatProvider } from '@kaira/chat-react';
+
+import { getChatEngine } from '@/lib/chat/engine';
+
+export function ChatRuntimeProvider(props: { readonly children: ReactNode }): JSX.Element {
+  const engine = getChatEngine();
+
+  return (
+    <ChatProvider
+      engine={engine}
+      autoConnect
+    >
+      {props.children}
+    </ChatProvider>
+  );
+}
+```
+
+```ts
+// lib/chat/server-chat-engine.ts
+import { ChatEngine } from '@kaira/chat-core';
+import { DitTransport } from '@kaira/chat-provider-dit';
+
+const transport = new DitTransport({
+  apiUrl: process.env.API_URL!,
+  apiKey: process.env.X_API_KEY!,
+  chatroomId: process.env.NEXT_PUBLIC_DEMO_CHATROOM_ID!,
+  senderId: process.env.NEXT_PUBLIC_DEMO_SENDER_ID!,
+  chatbotNickname: process.env.NEXT_PUBLIC_DEMO_CHATBOT_NICKNAME!,
+  send: {
+    apiId: process.env.X_API_ID!,
+    sessionId: process.env.NEXT_PUBLIC_DEMO_SESSION_ID!,
+    appContext: {
+      username: 'Dev Together',
+      gender: 'male',
+      dob: '2000-01-01',
+    },
+  },
+});
+
+export const engine = new ChatEngine({ transport });
+```
+
+`DitTransport` can be created without `send`, but outbound `transport.send(...)` becomes a no-op in that case.
+
+## 2) Polling Transport Example
+
+```ts
+import type { MessageMetadata, TransportEvent } from '@kaira/chat-core';
+
+import { PollingTransport } from '@kaira/chat-transport-polling';
+
+const conversationId = 'demo-conversation';
+
+const transport = new PollingTransport<TransportEvent, TransportEvent>({
+  intervalMs: 2000,
+  poll: async () => {
+    const response = await fetch(
+      `/api/chat/events?conversationId=${encodeURIComponent(conversationId)}`,
+    );
+    const json = (await response.json()) as {
+      success: boolean;
+      data?: ReadonlyArray<Record<string, unknown>>;
+    };
+
+    if (!json.success || !json.data) {
+      return [];
+    }
+
+    return json.data.map((payload) => ({
+      type: 'message' as const,
+      payload,
+      timestamp: Date.now(),
+    }));
+  },
+  send: async (event) => {
+    if (event.type !== 'message') return;
+
+    const payload = event.payload as {
+      conversationId?: unknown;
+      content?: unknown;
+      metadata?: unknown;
+    };
+
+    const message = typeof payload.content === 'string' ? payload.content : '';
+    const targetConversationId =
+      typeof payload.conversationId === 'string' ? payload.conversationId : conversationId;
+    const metadata =
+      payload.metadata && typeof payload.metadata === 'object'
+        ? (payload.metadata as MessageMetadata)
+        : undefined;
+
+    await fetch('/api/chat/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversationId: targetConversationId,
+        message,
+        metadata,
+      }),
+    });
+  },
+});
+```
+
+## 3) Streaming AI Example
+
+```ts
+import type { ChatEngine } from '@kaira/chat-core';
+
+import { createChatError } from '@kaira/chat-core';
+
+export async function streamFromApi(engine: ChatEngine, conversationId: string): Promise<void> {
+  const messageId = crypto.randomUUID();
+  engine.emitStreamStart(messageId, conversationId);
+
+  let accumulated = '';
+  try {
+    const stream = await fetch('/api/ai/stream');
+    const reader = stream.body?.getReader();
+    if (!reader) throw new Error('No stream reader available');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = new TextDecoder().decode(value);
+      accumulated += chunk;
+      engine.emitStreamChunk(messageId, chunk, accumulated);
+    }
+
+    await engine.emitStreamEnd({
+      id: messageId,
+      conversationId,
+      sender: { id: 'assistant', role: 'assistant' },
+      timestamp: Date.now(),
+      status: 'sent',
+      type: 'ai',
+      content: accumulated,
+      streamState: 'complete',
+    });
+  } catch (error: unknown) {
+    engine.emitStreamError(
+      messageId,
+      createChatError('transport', 'Stream failed', { cause: error }),
+    );
+  }
+}
+```

@@ -1,0 +1,111 @@
+# Transport API
+
+`ITransport` abstracts realtime communication from `ChatEngine`.
+
+## Interface
+
+```ts
+export interface ITransport<
+  TInbound extends TransportEvent = TransportEvent,
+  TOutbound extends TransportEvent = TransportEvent,
+> {
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  send(event: TOutbound): Promise<void>;
+  onMessage(handler: (event: TInbound) => void): Unsubscribe;
+  onStateChange(handler: (state: ConnectionState) => void): Unsubscribe;
+  getState(): ConnectionState;
+}
+```
+
+## Custom WebSocket Transport Example
+
+```ts
+import type { ConnectionState, ITransport, TransportEvent, Unsubscribe } from '@kaira/chat-core';
+
+export class WebSocketTransport implements ITransport {
+  private socket: WebSocket | undefined;
+  private state: ConnectionState = 'disconnected';
+  private readonly messageHandlers = new Set<(event: TransportEvent) => void>();
+  private readonly stateHandlers = new Set<(state: ConnectionState) => void>();
+
+  constructor(private readonly url: string) {}
+
+  async connect(): Promise<void> {
+    if (this.state !== 'disconnected') return;
+    this.setState('connecting');
+    this.socket = new WebSocket(this.url);
+
+    await new Promise<void>((resolve, reject) => {
+      if (!this.socket) return reject(new Error('Socket unavailable'));
+      this.socket.onopen = () => {
+        this.setState('connected');
+        resolve();
+      };
+      this.socket.onerror = () => reject(new Error('WebSocket connection failed'));
+      this.socket.onmessage = (event) => {
+        const payload = JSON.parse(event.data) as TransportEvent;
+        for (const handler of this.messageHandlers) handler(payload);
+      };
+      this.socket.onclose = () => this.setState('disconnected');
+    });
+  }
+
+  async disconnect(): Promise<void> {
+    if (!this.socket) return;
+    this.setState('disconnecting');
+    this.socket.close();
+    this.socket = undefined;
+    this.setState('disconnected');
+  }
+
+  async send(event: TransportEvent): Promise<void> {
+    if (!this.socket || this.state !== 'connected') return;
+    this.socket.send(JSON.stringify(event));
+  }
+
+  onMessage(handler: (event: TransportEvent) => void): Unsubscribe {
+    this.messageHandlers.add(handler);
+    return () => this.messageHandlers.delete(handler);
+  }
+
+  onStateChange(handler: (state: ConnectionState) => void): Unsubscribe {
+    this.stateHandlers.add(handler);
+    return () => this.stateHandlers.delete(handler);
+  }
+
+  getState(): ConnectionState {
+    return this.state;
+  }
+
+  private setState(next: ConnectionState): void {
+    this.state = next;
+    for (const handler of this.stateHandlers) handler(next);
+  }
+}
+```
+
+## Polling Transport
+
+Use the provided adapter:
+
+```ts
+import { PollingTransport } from '@kaira/chat-transport-polling';
+
+const transport = new PollingTransport({
+  intervalMs: 2000,
+  pollImmediately: true,
+  poll: async () => [],
+  send: async () => {},
+  onPollError: (error) => {
+    console.error('poll failed', error);
+  },
+});
+```
+
+Notes:
+
+- `intervalMs` defaults to `2000`.
+- `pollImmediately` defaults to `true`.
+- `send` is optional; if omitted, outbound sends are a no-op.
+- `onPollError` is optional and receives poll exceptions.

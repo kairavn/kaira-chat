@@ -1,0 +1,116 @@
+# Documentation Structure
+
+This site is built with **Next.js App Router + MDX**.
+
+## Folder Structure
+
+```text
+apps/docs/
+  app/
+    page.mdx                  # 1. Introduction
+    structure/page.mdx        # output: folder structure + outlines
+    architecture/page.mdx     # 2. Architecture Overview
+    quick-start/page.mdx      # 3. Quick Start
+    core-api/page.mdx         # 4. Core API
+    events/page.mdx           # 5. Events
+    streaming/page.mdx        # 6. Streaming API
+    transport/page.mdx        # 7. Transport API
+    storage/page.mdx          # 8. Storage API
+    plugins/page.mdx          # 9. Plugin System
+    middleware/page.mdx       # 10. Middleware
+    react/page.mdx            # 11. React Integration
+    ui/page.mdx               # 12. UI Components
+    devtools/page.mdx         # 13. DevTools
+    examples/page.mdx         # 14. Examples
+    layout.tsx
+    globals.css
+  mdx-components.tsx
+  next.config.mjs
+  package.json
+  tsconfig.json
+```
+
+## Page Outlines
+
+### Introduction
+
+- What the SDK is
+- Package map
+- Goals
+- Core features
+
+### Architecture Overview
+
+- `ChatEngine`, `EventBus`, `Transport`, `Storage`
+- Plugins and middleware composition
+- Streaming lifecycle
+- ASCII architecture diagrams
+
+### Quick Start
+
+- Install packages
+- Create engine
+- Connect transport
+- Send and render messages
+- Next.js App Router example
+
+### Core API
+
+- `ChatEngine` method signatures
+- lifecycle, conversations, messages, events, state
+
+### Events
+
+- Built-in event list
+- Payload structures
+- Subscription patterns
+
+### Streaming API
+
+- `emitStreamStart`, `emitStreamChunk`, `emitStreamEnd`, `emitStreamError`
+- AI streaming implementation example
+
+### Transport API
+
+- `ITransport` contract
+- custom transport example
+- WebSocket and polling patterns
+
+### Storage API
+
+- `IStorage` contract
+- local storage adapter
+- database adapter pattern
+
+### Plugin System
+
+- lifecycle: `install(engine)` / `destroy()`
+- message logger plugin example
+
+### Middleware
+
+- execution pipeline behavior
+- validation middleware example
+
+### React Integration
+
+- `ChatProvider`
+- `useMessages`, `useSendMessage`, `useStreamingMessage`
+- end-to-end UI composition example
+
+### UI Components
+
+- `MessageRenderer`
+- `MessageInput`
+- `ThinkingIndicator`
+
+### DevTools
+
+- enabling `ChatDevTools`
+- context-based variant
+
+### Examples
+
+- Next.js demo
+- polling transport demo
+- streaming AI demo

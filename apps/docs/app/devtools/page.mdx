@@ -1,0 +1,56 @@
+# DevTools
+
+`@kaira/chat-devtools` provides runtime inspection for events, messages, streams, transport, plugins, and middleware.
+
+DevTools render only in development mode. In production, `ChatDevTools` returns `null`.
+
+## Enable DevTools
+
+```tsx
+'use client';
+
+import type { ChatEngine } from '@kaira/chat-core';
+import type { JSX, ReactNode } from 'react';
+
+import { ChatDevTools } from '@kaira/chat-devtools';
+import { ChatProvider } from '@kaira/chat-react';
+
+export function ChatRuntime(props: {
+  readonly engine: ChatEngine;
+  readonly children: ReactNode;
+}): JSX.Element {
+  return (
+    <ChatProvider
+      engine={props.engine}
+      autoConnect
+    >
+      {props.children}
+      <ChatDevTools
+        engine={props.engine}
+        initiallyOpen={false}
+        maxEvents={500}
+      />
+    </ChatProvider>
+  );
+}
+```
+
+`maxEvents` defaults to `500` when omitted.
+
+## Context-based Variant
+
+If `ChatProvider` is already present:
+
+```tsx
+import { ChatDevToolsFromContext } from '@kaira/chat-devtools';
+
+<ChatDevToolsFromContext initiallyOpen={false} />;
+```
+
+## What You Can Inspect
+
+- Event timeline (`message:*`, `stream:*`, `connection:*`, `error`, `custom:*`)
+- Message and conversation snapshots
+- Stream chunk state and errors
+- Transport state
+- Plugin and middleware flow snapshots

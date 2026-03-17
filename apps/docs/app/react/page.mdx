@@ -1,0 +1,77 @@
+# React Integration
+
+`@kaira/chat-react` wraps `ChatEngine` with a provider + focused hooks.
+
+## Provider
+
+```ts
+export interface ChatProviderProps {
+  readonly engine?: ChatEngine;
+  readonly createEngine?: () => ChatEngine;
+  readonly children: ReactNode;
+  readonly autoConnect?: boolean;
+  readonly onConnectError?: (error: Error) => void;
+}
+```
+
+- Pass `engine` when you already created one.
+- Pass `createEngine` for lazy initialization.
+- `ChatProvider` requires one of `engine` or `createEngine`; otherwise it throws.
+- Set `autoConnect` for mount/unmount lifecycle handling.
+
+## Hooks
+
+- `useMessages(conversationId)` -> live + initial message list
+- `useSendMessage()` -> stable send callback
+- `useStreamingMessage(conversationId)` -> transient streaming state
+- `useConnectionState()` -> current connection state
+- `useConversation(conversationId)` -> conversation lookup
+- `useOptimisticMessages(messages)` -> optimistic reconciliation helpers
+- `useChatEngine()` -> direct engine access from context
+
+`useStreamingMessage` resets its local state on any `message:stream:end` or `message:stream:error` event.
+
+## Example Chat UI
+
+```tsx
+'use client';
+
+import type { JSX } from 'react';
+
+import {
+  useMessages,
+  useOptimisticMessages,
+  useSendMessage,
+  useStreamingMessage,
+} from '@kaira/chat-react';
+import { MessageInput, ThinkingIndicator } from '@kaira/chat-ui';
+
+export function ChatPanel(props: { readonly conversationId: string }): JSX.Element {
+  const { conversationId } = props;
+  const messages = useMessages(conversationId);
+  const { mergedMessages } = useOptimisticMessages(messages);
+  const sendMessage = useSendMessage();
+  const streaming = useStreamingMessage(conversationId);
+
+  return (
+    <section>
+      <div>
+        {mergedMessages.map((message) => (
+          <p key={message.id}>
+            <strong>{message.sender.role}:</strong>{' '}
+            {message.type === 'text' || message.type === 'ai' ? message.content : message.type}
+          </p>
+        ))}
+      </div>
+
+      {streaming.isStreaming ? <ThinkingIndicator /> : null}
+
+      <MessageInput
+        onSend={async (text) => {
+          await sendMessage(conversationId, { type: 'text', content: text });
+        }}
+      />
+    </section>
+  );
+}
+```

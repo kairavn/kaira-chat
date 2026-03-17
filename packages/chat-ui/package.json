@@ -1,0 +1,64 @@
+{
+  "name": "@kaira/chat-ui",
+  "version": "0.1.0",
+  "description": "UI components for Kaira Chat SDK",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kaira/chat-core.git",
+    "directory": "packages/chat-ui"
+  },
+  "license": "MIT",
+  "scripts": {
+    "prepack": "pnpm build",
+    "build": "tsup --config tsup.config.ts",
+    "dev": "tsup --config tsup.config.ts --watch",
+    "check-types": "tsc --project tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "test": "echo 'no tests'"
+  },
+  "dependencies": {
+    "@kaira/chat-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@types/node": "^22.19.15",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "chat",
+    "chat-sdk",
+    "ai-chat",
+    "react-chat",
+    "chat-ui",
+    "streaming-chat"
+  ]
+}
