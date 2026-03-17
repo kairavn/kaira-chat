@@ -1,0 +1,23 @@
+{
+  "extends": "@repo/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "strictNullChecks": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@kaira/chat-core": ["../../packages/chat-core/src/index.ts"],
+      "@kaira/chat-react": ["../../packages/chat-react/src/index.ts"],
+      "@kaira/chat-ui": ["../../packages/chat-ui/src/index.ts"],
+      "@kaira/chat-devtools": ["../../packages/chat-devtools/src/index.ts"],
+      "@kaira/chat-transport-polling": ["../../packages/chat-transport-polling/src/index.ts"],
+      "@kaira/chat-provider-dit": ["../../packages/chat-provider-dit/src/index.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", "next.config.js", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

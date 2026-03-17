@@ -1,0 +1,76 @@
+# Architecture Overview
+
+The SDK is centered around `ChatEngine` and composes optional transport, storage, plugins, and middleware.
+
+## Core Components
+
+### ChatEngine
+
+- Main orchestrator for lifecycle, message flow, and conversation flow.
+- Runs in standalone mode when no transport/storage is provided.
+- Emits typed events and exposes streaming helpers.
+
+### EventBus
+
+- Typed pub/sub for core events and `custom:*` plugin events.
+- Supports one-time handlers and wildcard subscription for custom events (`custom:*`).
+
+### Transport
+
+- `ITransport` contract for realtime communication (`connect`, `disconnect`, `send`, subscriptions).
+- Polled or push-based transports can be plugged in.
+
+### Storage
+
+- `IStorage` contract for message/conversation persistence with cursor pagination.
+- Optional; when omitted, engine uses in-memory maps.
+
+### Plugins
+
+- Runtime extensions with lifecycle hooks.
+- Register with `engine.use(plugin)` or via engine config.
+
+### Middleware
+
+- Ordered async pipeline around outbound events.
+- Can transform event payloads or short-circuit flow.
+
+### Streaming Lifecycle
+
+- Explicit helper methods for AI chunked responses:
+  `stream:start -> stream:chunk* -> stream:end | stream:error`.
+
+## Runtime Diagram
+
+```text
+┌──────────────┐       sendMessage()         ┌────────────────────────┐
+│ UI / Client  │ ──────────────────────────> │       ChatEngine       │
+└──────────────┘                             │  - state machines      │
+         ▲                                   │  - middleware pipeline │
+         │ events                            │  - event bus           │
+         │                                   └──────────┬─────────────┘
+         │                                              │
+         │                         ┌────────────────────┴───────────────────┐
+         │                         │                                        │
+         │                         ▼                                        ▼
+         │                 ┌───────────────┐                         ┌────────────────┐
+         │                 │   ITransport  │                         │    IStorage    │
+         │                 │ (WS/SSE/Poll) │                         │ (DB/API/Local) │
+         │                 └───────────────┘                         └────────────────┘
+         │
+         └────────────── message:* / stream:* / connection:* events ────────────────
+```
+
+## Extension Diagram
+
+```text
+Outbound event ("message:sent")
+  -> middleware[0]
+  -> middleware[1]
+  -> middleware[n]
+  -> persist / send / emit
+
+Plugin lifecycle
+  engine.connect()  -> plugin.install(engine)
+  engine.disconnect() -> plugin.destroy()
+```

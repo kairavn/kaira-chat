@@ -1,0 +1,44 @@
+# UI Components
+
+`@kaira/chat-ui` contains composable primitives, not a monolithic chat shell.
+
+## MessageRenderer
+
+Renders a single message using a `RendererRegistry`.
+
+```ts
+export interface DynamicMessageRendererProps extends MessageRendererProps {
+  readonly registry: RendererRegistry;
+  readonly fallback?: ComponentType<{ readonly message: Message }>;
+}
+```
+
+Use when you need polymorphic rendering by `message.type`.
+
+## MessageInput
+
+Generic text input with Enter-to-send behavior.
+
+```ts
+export interface MessageInputProps {
+  readonly disabled?: boolean;
+  readonly placeholder?: string;
+  readonly onSend: (text: string) => Promise<void> | void;
+}
+```
+
+## ThinkingIndicator
+
+Lightweight component for streaming/typing feedback.
+
+```tsx
+<ThinkingIndicator />
+```
+
+## Typical Composition
+
+```tsx
+<MessageRenderer message={message} conversation={conversation} registry={registry} />
+<ThinkingIndicator />
+<MessageInput onSend={handleSend} />
+```

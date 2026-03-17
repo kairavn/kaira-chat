@@ -1,0 +1,39 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": [
+        "NODE_ENV",
+        "API_URL",
+        "X_API_KEY",
+        "X_API_ID",
+        "NEXT_PUBLIC_BASE_PATH",
+        "NEXT_PUBLIC_DEMO_SESSION_ID",
+        "NEXT_PUBLIC_DEMO_SENDER_ID",
+        "NEXT_PUBLIC_DEMO_CHATBOT_NICKNAME",
+        "NEXT_PUBLIC_DEMO_CHATROOM_ID"
+      ],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

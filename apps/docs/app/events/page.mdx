@@ -1,0 +1,70 @@
+# Events
+
+Events are emitted by `ChatEngine` and consumed through `engine.on(...)`.
+
+## Core Events
+
+Current built-in event surface:
+
+- `message:sent`
+- `message:received`
+- `message:updated`
+- `message:deleted`
+- `message:status`
+- `message:stream:start`
+- `message:stream:chunk`
+- `message:stream:end`
+- `message:stream:error`
+- `typing:start`
+- `typing:stop`
+- `conversation:created`
+- `conversation:updated`
+- `conversation:deleted`
+- `connection:state`
+- `error`
+
+## Payload Structure
+
+Use exported types as the canonical source of truth:
+
+```ts
+import type { ChatEvent, ChatEventMap, ChatEventType } from '@kaira/chat-core';
+```
+
+Example payloads:
+
+```ts
+type StreamErrorEvent = ChatEvent<'message:stream:error'>;
+// { type, timestamp, messageId, conversationId, error }
+
+type ConnectionStateEvent = ChatEvent<'connection:state'>;
+// { type, timestamp, state, previousState }
+```
+
+## Subscribe Example
+
+```ts
+engine.on('message:received', (event) => {
+  console.log('incoming:', event.message.id, event.message.type);
+});
+
+engine.on('connection:state', (event) => {
+  console.log('connection:', event.previousState, '->', event.state);
+});
+```
+
+## Custom Plugin Events
+
+Custom namespaces are supported for subscription:
+
+```ts
+engine.on('custom:*', (event) => {
+  console.log('any custom event', event);
+});
+
+engine.on('custom:analytics:track', (event) => {
+  console.log('specific custom event', event);
+});
+```
+
+`IChatEngine` exposes custom `on/off` subscriptions. It does not currently expose a public custom event emit API.

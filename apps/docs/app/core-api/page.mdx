@@ -1,0 +1,75 @@
+# Core API
+
+`ChatEngine` implements `IChatEngine` and adds streaming helper methods.
+
+## Engine Construction
+
+```ts
+new ChatEngine(config?: ChatEngineConfig);
+```
+
+```ts
+export interface ChatEngineConfig {
+  readonly transport?: ITransport;
+  readonly storage?: IStorage;
+  readonly plugins?: ReadonlyArray<ChatPlugin>;
+  readonly middleware?: ReadonlyArray<Middleware>;
+  readonly sender?: Participant;
+}
+```
+
+## Lifecycle
+
+```ts
+connect(): Promise<void>;
+disconnect(): Promise<void>;
+```
+
+## Conversations
+
+```ts
+getConversation(id: string): Promise<Conversation | undefined>;
+getConversations(query?: ConversationQuery): Promise<CursorPage<Conversation>>;
+createConversation(params: CreateConversationParams): Promise<Conversation>;
+```
+
+## Messages
+
+```ts
+sendMessage(conversationId: string, content: MessageContent): Promise<Message>;
+getMessages(query: MessageQuery): Promise<CursorPage<Message>>;
+updateMessage(id: string, update: Partial<MessageContent>): Promise<Message>;
+deleteMessage(id: string): Promise<void>;
+```
+
+## Events
+
+```ts
+on<E extends ChatEventType>(event: E, handler: ChatEventHandler<E>): Unsubscribe;
+off<E extends ChatEventType>(event: E, handler: ChatEventHandler<E>): void;
+
+on(event: `custom:${string}`, handler: (event: Record<string, unknown>) => void): Unsubscribe;
+off(event: `custom:${string}`, handler: (event: Record<string, unknown>) => void): void;
+```
+
+## State
+
+```ts
+getConnectionState(): ConnectionState;
+getConversationState(id: string): ConversationState;
+```
+
+## Plugins
+
+```ts
+use(plugin: ChatPlugin): void;
+```
+
+## Streaming Helpers
+
+```ts
+emitStreamStart(messageId: string, conversationId: string): void;
+emitStreamChunk(messageId: string, chunk: string, accumulated: string): void;
+emitStreamEnd(message: Message & { type: "ai" }): Promise<void>;
+emitStreamError(messageId: string, conversationId: string, error: ChatError): void;
+```

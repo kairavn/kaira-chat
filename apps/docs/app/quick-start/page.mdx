@@ -1,0 +1,111 @@
+# Quick Start
+
+Build a minimal chat app with Next.js App Router, `chat-core`, `chat-react`, and polling transport.
+
+## 1) Install Packages
+
+```bash
+pnpm add @kaira/chat-core @kaira/chat-react @kaira/chat-ui @kaira/chat-transport-polling
+```
+
+## 2) Create Engine
+
+```ts
+import { ChatEngine } from '@kaira/chat-core';
+import { PollingTransport } from '@kaira/chat-transport-polling';
+
+export function createEngine(): ChatEngine {
+  const transport = new PollingTransport({
+    intervalMs: 1500,
+    poll: async () => [],
+    send: async () => {},
+  });
+
+  return new ChatEngine({ transport });
+}
+```
+
+## 3) Connect Transport
+
+Use `ChatProvider` with `autoConnect`:
+
+```tsx
+'use client';
+
+import type { JSX } from 'react';
+
+import { ChatProvider } from '@kaira/chat-react';
+
+import { createEngine } from '@/lib/chat-engine';
+
+const engine = createEngine();
+
+export function Providers(props: { readonly children: React.ReactNode }): JSX.Element {
+  return (
+    <ChatProvider
+      engine={engine}
+      autoConnect
+    >
+      {props.children}
+    </ChatProvider>
+  );
+}
+```
+
+## 4) Send and Render Messages
+
+```tsx
+'use client';
+
+import type { JSX } from 'react';
+
+import { useMessages, useSendMessage, useStreamingMessage } from '@kaira/chat-react';
+import { MessageInput, ThinkingIndicator } from '@kaira/chat-ui';
+
+const conversationId = 'demo-conversation';
+
+export function ChatScreen(): JSX.Element {
+  const messages = useMessages(conversationId);
+  const sendMessage = useSendMessage();
+  const streaming = useStreamingMessage(conversationId);
+
+  return (
+    <section>
+      <ul>
+        {messages.map((message) => (
+          <li key={message.id}>
+            {message.type === 'text' || message.type === 'ai' ? message.content : message.type}
+          </li>
+        ))}
+      </ul>
+
+      {streaming.isStreaming ? <ThinkingIndicator /> : null}
+
+      <MessageInput
+        onSend={async (text) => {
+          await sendMessage(conversationId, { type: 'text', content: text });
+        }}
+      />
+    </section>
+  );
+}
+```
+
+## 5) Next.js App Router Wiring
+
+```tsx
+// app/layout.tsx
+import type { JSX } from 'react';
+
+import { Providers } from '@/components/providers';
+
+export default function RootLayout(props: { readonly children: React.ReactNode }): JSX.Element {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>{props.children}</Providers>
+      </body>
+    </html>
+  );
+}
+```

@@ -1,0 +1,21 @@
+{
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "never",
+    "source.fixAll.prettier": "never",
+    "source.fixAll.eslint": "never",
+    "source.fixAll.ts": "never"
+  },
+
+  "tailwindCSS.classAttributes": ["class", "className", "ngClass", "class:list"],
+  "tailwindCSS.experimental.classRegex": [
+    ["twMerge\\(([\\s\\S]+?)\\)\\s", "'([^']*)'"],
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([\\s\\S]+?)\\)\\s", "'([^']*)'"],
+    ["tv\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["clsx\\(.*?\\)(?!\\])", "(?:'|\"|`)([^\"'`]*)(?:'|\"|`)"],
+    ["(?:[a-zA-Z0-9_-]*[Cc]lass(?:Name|es)?)=[\"'`]([^\"'`]+)[\"'`]", ""]
+  ]
+}
