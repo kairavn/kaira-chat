@@ -1,0 +1,39 @@
+{
+  "$schema": "https://syncpack.dev/schema.json",
+  "source": ["package.json", "apps/*/package.json", "packages/*/package.json"],
+  "versionGroups": [
+    {
+      "label": "Use workspace protocol for local packages",
+      "dependencies": ["$LOCAL"],
+      "dependencyTypes": ["dev", "prod"],
+      "pinVersion": "workspace:*"
+    },
+    {
+      "label": "Pin React peer contract for published libraries",
+      "packages": ["@kaira/chat-devtools", "@kaira/chat-react", "@kaira/chat-ui"],
+      "dependencies": ["react", "react-dom"],
+      "dependencyTypes": ["peer"],
+      "pinVersion": "^18 || ^19"
+    },
+    {
+      "label": "Keep shared external dependencies aligned",
+      "dependencies": [
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "babel-plugin-react-compiler",
+        "eslint",
+        "next",
+        "react",
+        "react-dom",
+        "typescript",
+        "vitest"
+      ],
+      "dependencyTypes": ["dev", "prod"]
+    },
+    {
+      "label": "Ignore everything else",
+      "isIgnored": true
+    }
+  ]
+}

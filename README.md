@@ -31,6 +31,33 @@ pnpm check-types
 pnpm lint
 ```
 
+## Dependency Upgrade Flow
+
+Shared dependency versions are enforced with `syncpack`, and every upgrade goes
+through the same validation gate.
+
+```sh
+pnpm deps:check
+pnpm deps:outdated
+pnpm deps:upgrade vitest
+pnpm validate
+```
+
+- `pnpm deps:check` verifies shared dependency versions stay aligned across the
+  monorepo.
+- `pnpm deps:outdated` shows available `patch` and `minor` updates for managed
+  dependencies only.
+- `pnpm deps:upgrade` updates all managed dependencies across the repo to the
+  latest allowed `minor` versions.
+- `pnpm deps:upgrade <name>` updates the selected dependency across every
+  package that uses it, then runs `pnpm install` and `pnpm validate`.
+- `pnpm deps:upgrade --target patch` restricts updates to patch releases.
+- Dependency upgrades are manual-only. This repo does not use bot-created
+  upgrade PRs.
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full dependency management
+policy.
+
 ## Build and Validate Before Publishing
 
 ```sh

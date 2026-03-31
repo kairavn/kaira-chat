@@ -111,6 +111,99 @@ peer-dependency warnings.
 
 ---
 
+## Shared dependency management
+
+This monorepo uses `syncpack` as the source of truth for shared external
+dependency versions.
+
+The enforced dependency set currently includes:
+
+- `eslint`
+- `typescript`
+- `@types/node`
+- `vitest`
+- `next`
+- `react`
+- `react-dom`
+- `@types/react`
+- `@types/react-dom`
+- `babel-plugin-react-compiler`
+
+`@kaira/*` and `@repo/*` packages stay on `workspace:*` and are not treated like
+external dependencies.
+
+Published React packages also keep a stable peer contract:
+
+- `peerDependencies.react`: `^18 || ^19`
+- `peerDependencies.react-dom`: `^18 || ^19`
+
+If you change one of those ranges, `pnpm deps:check` should fail.
+
+### Daily commands
+
+```bash
+pnpm deps:check
+pnpm deps:fix
+pnpm deps:outdated
+pnpm deps:upgrade vitest
+pnpm validate
+```
+
+What they do:
+
+- `pnpm deps:check` runs `syncpack lint` and fails on version drift.
+- `pnpm deps:fix` runs `syncpack fix` to normalize mismatched managed versions.
+- `pnpm deps:outdated` shows only `patch` and `minor` updates for managed
+  dependencies.
+- `pnpm deps:upgrade` updates every managed dependency across the monorepo to
+  the latest allowed `minor` version.
+- `pnpm deps:upgrade <dependency>` updates one managed dependency everywhere it
+  is used, then runs `pnpm install`, then `pnpm validate`.
+- `pnpm deps:upgrade --target patch` restricts upgrades to patch releases.
+- `pnpm validate` is the single CI-quality gate:
+  `deps:check -> lint -> check-types -> build -> test`.
+
+### Upgrade policy
+
+This repo uses a manual-only dependency upgrade flow. There is no automation
+opening dependency PRs.
+
+Use manual upgrades when you want to refresh all managed dependencies or target
+a specific shared dependency.
+
+Examples:
+
+```bash
+pnpm deps:outdated
+pnpm deps:upgrade
+pnpm deps:upgrade vitest
+pnpm deps:upgrade --dependencies react --target patch
+```
+
+`pnpm deps:upgrade` accepts only `minor` and `patch` targets. Major upgrades are
+not part of the standard workflow and should be handled as an explicit,
+separate change.
+
+Manual upgrades are expected to pass the same validation gate before
+merge.
+
+### Review expectations
+
+Do not merge dependency PRs only because the versions are aligned. `syncpack`
+guarantees consistency, not semantic safety.
+
+Review at least:
+
+- release notes for any dependency with notable behavior changes
+- peer dependency impact for published SDK packages
+- generated lockfile diff
+- `pnpm validate` result
+
+For high-risk upgrades like `react`, `react-dom`, `next`, or test/build
+toolchain changes, prefer a dedicated PR even if the change looks small.
+
+---
+
 ## Local development
 
 ```bash
