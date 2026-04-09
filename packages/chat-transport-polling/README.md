@@ -14,9 +14,9 @@ npm install @kaira/chat-transport-polling @kaira/chat-core
 import { PollingTransport } from '@kaira/chat-transport-polling';
 
 const transport = new PollingTransport({
-  pollIntervalMs: 1000,
-  pollEvents: async () => [],
-  sendEvent: async (event) => {
+  intervalMs: 1000,
+  poll: async () => [],
+  send: async (event) => {
     console.log('send', event.type);
   },
 });

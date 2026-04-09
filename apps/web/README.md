@@ -35,7 +35,14 @@ Edit `apps/web/.env.local` — the three required server-side variables are:
 | `X_API_KEY` | API authentication key        |
 | `X_API_ID`  | API application/client ID     |
 
-All other variables are optional and fall back to hardcoded development defaults.
+The demo runtime also requires these shared `NEXT_PUBLIC_` variables:
+
+- `NEXT_PUBLIC_DEMO_SESSION_ID`
+- `NEXT_PUBLIC_DEMO_SENDER_ID`
+- `NEXT_PUBLIC_DEMO_CHATBOT_NICKNAME`
+- `NEXT_PUBLIC_DEMO_CHATROOM_ID`
+
+They are consumed by `apps/web/config/demo.ts` on both the server and client and fail fast when missing.
 
 ### 3. Run locally
 
@@ -73,4 +80,4 @@ apps/web/
 | `@kaira/chat-react`        | React hooks (`useChat`, etc.)    |
 | `@kaira/chat-ui`           | Pre-built UI components          |
 | `@kaira/chat-devtools`     | Debug overlay (dev mode only)    |
-| `@kaira/chat-provider-dit` | DIT transport implementation     |
+| `@kaira/chat-provider-dit` | DIT transport adapter            |

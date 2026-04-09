@@ -16,7 +16,7 @@ import { MessageInput } from '@kaira/chat-ui';
 export function Composer(): JSX.Element {
   return (
     <MessageInput
-      onSubmit={async (content) => {
+      onSend={async (content) => {
         console.log('submit', content);
       }}
     />

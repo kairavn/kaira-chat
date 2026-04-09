@@ -15,17 +15,17 @@ import { ChatEngine } from '@kaira/chat-core';
 import { ChatProvider, useMessages, useSendMessage } from '@kaira/chat-react';
 
 const engine = new ChatEngine();
+const conversationId = 'demo-room';
 
 function ChatScreen(): JSX.Element {
-  const messages = useMessages();
+  const messages = useMessages(conversationId);
   const sendMessage = useSendMessage();
 
   return (
     <button
       type="button"
       onClick={() =>
-        sendMessage({
-          conversationId: 'demo-room',
+        sendMessage(conversationId, {
           type: 'text',
           content: 'Hello world',
         })

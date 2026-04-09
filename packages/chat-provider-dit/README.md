@@ -1,6 +1,6 @@
 # @kaira/chat-provider-dit
 
-DIT provider integration for Kaira Chat SDK.
+DIT transport adapter for Kaira Chat SDK.
 
 ## Installation
 

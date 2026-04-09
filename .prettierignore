@@ -8,3 +8,7 @@ dist
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+
+# Ignore generated internal status docs; they must match scripts/render-feature-status.mjs output exactly.
+docs/internal/IMPLEMENTATION_STATUS.md
+docs/internal/FEATURE_MATRIX.md

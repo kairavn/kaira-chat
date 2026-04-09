@@ -1,0 +1,555 @@
+{
+  "meta": {
+    "canonicalVersion": 1,
+    "generatedAt": "2026-04-09",
+    "sourceOfTruth": "docs/internal/feature-status.json",
+    "generatedOutputs": [
+      "docs/internal/IMPLEMENTATION_STATUS.md",
+      "docs/internal/FEATURE_MATRIX.md"
+    ],
+    "statusVocabulary": {
+      "implemented": "A source-backed concrete implementation exists and is reachable through exports, runtime code, or an active workflow.",
+      "partial": "A concrete path exists but is incomplete, latent, or only partly wired.",
+      "interface-only": "A contract or export exists without concrete in-repo implementation or wiring.",
+      "missing": "The repo currently has no concrete backing for a tracked surface implied by contracts, surrounding code, or maintained docs."
+    },
+    "surfaceTypes": {
+      "public-sdk": "Published SDK package surface.",
+      "demo-app": "Internal demo app or demo-only runtime surface.",
+      "tooling-release": "Tooling, CI, deployment, or release workflow surface.",
+      "consumer-docs": "Consumer-facing docs app surface.",
+      "internal-docs": "Internal docs and repo-safety surface."
+    },
+    "backingTypes": {
+      "concrete": "Implemented in runtime code and reachable.",
+      "contract-only": "Declared as a contract or type surface only.",
+      "docs-only": "Described in docs but not source-backed as runtime behavior.",
+      "workflow-only": "Defined in checked-in workflow or tooling config.",
+      "none": "No concrete implementation exists in the repo."
+    },
+    "maintainabilityRules": [
+      "Track only high-value surfaces that help future engineers and agents avoid unsafe edits or false assumptions.",
+      "Every entry must cite one to three evidence paths from code, config, tests, or workflow files.",
+      "Consumer docs in apps/docs and README files may support a note, but they must never be the sole evidence.",
+      "Partial and missing entries must explain the concrete gap or latent wiring.",
+      "IMPLEMENTATION_STATUS.md and FEATURE_MATRIX.md are generated views and must stay in sync with this file."
+    ]
+  },
+  "entries": [
+    {
+      "id": "chat-engine-orchestration",
+      "category": "Core Runtime",
+      "feature": "ChatEngine orchestration",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/src/engine/chat-engine.ts",
+        "packages/chat-core/src/types/engine.ts",
+        "packages/chat-core/src/engine/chat-engine.test.ts"
+      ],
+      "notes": "Engine lifecycle, message CRUD, transport wiring, storage integration, plugin registration, and middleware execution are implemented and tested.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "core-event-system",
+      "category": "Core Runtime",
+      "feature": "Event system",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/src/event-bus/event-bus.ts",
+        "packages/chat-core/src/types/event.ts",
+        "packages/chat-core/src/event-bus/event-bus.test.ts"
+      ],
+      "notes": "Typed core events plus custom namespaced events are present and tested.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "core-streaming-helpers",
+      "category": "Core Runtime",
+      "feature": "Streaming helper methods",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/src/engine/chat-engine.ts",
+        "packages/chat-core/src/types/event.ts",
+        "packages/chat-core/src/engine/chat-engine.test.ts"
+      ],
+      "notes": "Core exposes explicit stream lifecycle helpers, but first-party adapters do not automatically emit them.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "storage-contract",
+      "category": "Contracts & Extensibility",
+      "feature": "Storage contract (IStorage)",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "interface-only",
+      "backing": "contract-only",
+      "evidence": ["packages/chat-core/src/types/storage.ts", "packages/chat-core/src/index.ts"],
+      "notes": "The public contract is exported, but there is no first-party storage adapter package in the repo.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "storage-integration",
+      "category": "Contracts & Extensibility",
+      "feature": "ChatEngine storage integration",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/src/engine/chat-engine.ts",
+        "packages/chat-core/src/engine/chat-engine.test.ts"
+      ],
+      "notes": "Storage-backed get, save, update, delete, and dedupe behavior is implemented inside core.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "provider-contract",
+      "category": "Contracts & Extensibility",
+      "feature": "Provider abstraction (IProvider)",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "interface-only",
+      "backing": "contract-only",
+      "evidence": ["packages/chat-core/src/types/provider.ts", "packages/chat-core/src/index.ts"],
+      "notes": "The provider contract is exported, but there is no concrete provider package or engine integration in the repo.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "middleware-pipeline",
+      "category": "Contracts & Extensibility",
+      "feature": "Middleware pipeline",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/src/middleware/pipeline.ts",
+        "packages/chat-core/src/engine/chat-engine.ts",
+        "packages/chat-core/src/middleware/pipeline.test.ts"
+      ],
+      "notes": "Middleware registration and ordered execution are implemented and tested, but there is no first-party middleware package.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "plugin-lifecycle",
+      "category": "Contracts & Extensibility",
+      "feature": "Plugin contract and lifecycle",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/src/types/plugin.ts",
+        "packages/chat-core/src/engine/chat-engine.ts",
+        "packages/chat-core/src/engine/chat-engine.test.ts"
+      ],
+      "notes": "Engine-level plugin registration and teardown exist, but there are no first-party plugin packages.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "polling-transport",
+      "category": "Concrete Adapters",
+      "feature": "Polling transport",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-transport-polling",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-transport-polling/src/polling-transport.ts",
+        "packages/chat-transport-polling/src/index.ts",
+        "packages/chat-transport-polling/src/polling-transport.test.ts"
+      ],
+      "notes": "Generic polling-based ITransport implementation with reconnect/backoff behavior is present and tested.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "dit-transport-adapter",
+      "category": "Concrete Adapters",
+      "feature": "DIT transport adapter",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-provider-dit",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-provider-dit/src/dit-transport.ts",
+        "packages/chat-provider-dit/src/index.ts",
+        "packages/chat-provider-dit/src/dit-transport.test.ts"
+      ],
+      "notes": "This package implements a transport adapter, not a concrete IProvider. The package name is easy to over-read.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "other-first-party-transports",
+      "category": "Concrete Adapters",
+      "feature": "Other first-party transport packages",
+      "surfaceType": "public-sdk",
+      "ownerArea": "monorepo",
+      "publicSurface": true,
+      "status": "missing",
+      "backing": "none",
+      "evidence": [
+        "pnpm-workspace.yaml",
+        "packages/chat-transport-polling/package.json",
+        "packages/chat-provider-dit/package.json"
+      ],
+      "notes": "There are no first-party WebSocket, SSE, or other transport packages beyond polling and the DIT-specific adapter.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "react-provider-hooks",
+      "category": "React / UI / Devtools",
+      "feature": "React provider and hooks",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-react",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-react/src/chat-context.tsx",
+        "packages/chat-react/src/index.ts",
+        "apps/web/components/chat/Chat.tsx"
+      ],
+      "notes": "The exported React runtime is source-backed and used by the demo app.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "react-streaming-hook",
+      "category": "React / UI / Devtools",
+      "feature": "React streaming hook",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-react",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-react/src/useStreamingMessage.ts",
+        "packages/chat-react/src/index.ts",
+        "packages/chat-core/src/types/event.ts"
+      ],
+      "notes": "The hook is implemented against core stream events, but the main demo path does not currently emit real stream lifecycle events.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "default-renderers",
+      "category": "React / UI / Devtools",
+      "feature": "Default UI renderers",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-ui",
+      "publicSurface": true,
+      "status": "partial",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-ui/src/default-renderers.tsx",
+        "packages/chat-core/src/types/message.ts",
+        "packages/chat-ui/src/index.ts"
+      ],
+      "notes": "Built-in renderers cover text, image, file, system, and ai messages. Tool-call, tool-result, and custom message defaults are not present.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "devtools-panel",
+      "category": "React / UI / Devtools",
+      "feature": "Devtools panel",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-devtools",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-devtools/src/ChatDevTools.tsx",
+        "packages/chat-devtools/src/useChatDevTools.ts",
+        "packages/chat-devtools/src/index.ts"
+      ],
+      "notes": "Runtime inspection UI is implemented, but automated coverage is absent.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "demo-browser-runtime",
+      "category": "Demo App",
+      "feature": "Demo browser runtime",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web client",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": ["apps/web/lib/chat/engine.ts", "apps/web/components/chat/Chat.tsx"],
+      "notes": "The browser singleton ChatEngine polls the Next.js server routes instead of talking to DIT directly.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "demo-server-runtime",
+      "category": "Demo App",
+      "feature": "Demo server runtime",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web server",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "apps/web/lib/chat/server-chat-engine.ts",
+        "apps/web/lib/chat/server-config.ts",
+        "apps/web/app/api/chat/messages/route.ts"
+      ],
+      "notes": "The server-owned ChatEngine keeps DIT credentials server-side and proxies message send/list behavior.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "demo-streaming-ux",
+      "category": "Demo App",
+      "feature": "Demo streaming UX",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web",
+      "publicSurface": false,
+      "status": "partial",
+      "backing": "concrete",
+      "evidence": [
+        "apps/web/components/chat/Chat.tsx",
+        "packages/chat-react/src/useStreamingMessage.ts",
+        "apps/web/lib/chat/server-chat-engine.ts"
+      ],
+      "notes": "The UI shows a thinking state and can render stream previews, but the main DIT-backed runtime path does not emit message:stream events.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "demo-sse-route",
+      "category": "Demo App",
+      "feature": "SSE events route",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web API",
+      "publicSurface": false,
+      "status": "partial",
+      "backing": "concrete",
+      "evidence": [
+        "apps/web/app/api/chat/events/route.ts",
+        "apps/web/lib/chat/event-broker.ts",
+        "apps/web/lib/chat/engine.ts"
+      ],
+      "notes": "The server route supports text/event-stream, but the browser runtime currently uses polling and there is no EventSource usage in the repo. Inferred: the broker is process-local only.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "demo-conversation-bootstrap-route",
+      "category": "Demo App",
+      "feature": "Conversation bootstrap route",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web API",
+      "publicSurface": false,
+      "status": "partial",
+      "backing": "concrete",
+      "evidence": [
+        "apps/web/app/api/chat/conversation/route.ts",
+        "apps/web/lib/chat/server-chat-engine.ts",
+        "apps/web/components/chat/Chat.tsx"
+      ],
+      "notes": "The route exists and creates a demo conversation, but the main UI path uses the configured chatroom id directly and does not call it.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "consumer-docs-app",
+      "category": "Docs & Tooling",
+      "feature": "Consumer docs app",
+      "surfaceType": "consumer-docs",
+      "ownerArea": "apps/docs",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "apps/docs/package.json",
+        "apps/docs/next.config.mjs",
+        ".github/workflows/deploy-docs-pages.yml"
+      ],
+      "notes": "The docs app is source-backed and deployed, but it is authored MDX rather than generated API reference material.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "docs-search-index",
+      "category": "Docs & Tooling",
+      "feature": "Docs search index",
+      "surfaceType": "consumer-docs",
+      "ownerArea": "apps/docs",
+      "publicSurface": false,
+      "status": "partial",
+      "backing": "concrete",
+      "evidence": [
+        "apps/docs/lib/generate-search-data.ts",
+        "apps/docs/lib/search-data.ts",
+        "apps/docs/components/docs/search.tsx"
+      ],
+      "notes": "The committed search index is generated from authored MDX, but regeneration is a separate manual step rather than an explicit root workflow.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "internal-docs-status-system",
+      "category": "Docs & Tooling",
+      "feature": "Internal feature status system",
+      "surfaceType": "internal-docs",
+      "ownerArea": "docs/internal",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "docs/internal/feature-status.json",
+        "docs/internal/IMPLEMENTATION_STATUS.md",
+        "scripts/render-feature-status.mjs"
+      ],
+      "notes": "The canonical source lives in JSON and generates the markdown views to reduce drift between status documents.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "ci-validate-workflow",
+      "category": "Docs & Tooling",
+      "feature": "CI validate workflow",
+      "surfaceType": "tooling-release",
+      "ownerArea": "root workflows",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "workflow-only",
+      "evidence": [".github/workflows/ci.yml", "package.json", "turbo.json"],
+      "notes": "CI runs the repo-native validate command on pull requests and pushes to main.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "docs-deploy-workflow",
+      "category": "Docs & Tooling",
+      "feature": "Docs deployment workflow",
+      "surfaceType": "tooling-release",
+      "ownerArea": "root workflows",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "workflow-only",
+      "evidence": [".github/workflows/deploy-docs-pages.yml", "apps/docs/next.config.mjs"],
+      "notes": "GitHub Pages deployment for apps/docs is active and source-backed.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "release-automation",
+      "category": "Docs & Tooling",
+      "feature": "Package release automation",
+      "surfaceType": "tooling-release",
+      "ownerArea": "root workflows",
+      "publicSurface": false,
+      "status": "partial",
+      "backing": "workflow-only",
+      "evidence": [".github/workflows/release.yml", ".changeset/config.json", "package.json"],
+      "notes": "Changesets configuration exists, but the checked-in release workflow does not currently run its publish path because the trigger and job guard do not line up.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "chat-core-tests",
+      "category": "Testing",
+      "feature": "@kaira/chat-core automated tests",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/vitest.config.ts",
+        "packages/chat-core/src/engine/chat-engine.test.ts",
+        "packages/chat-core/src/event-bus/event-bus.test.ts"
+      ],
+      "notes": "Core runtime behavior has broad unit coverage across engine, events, state, middleware, serialization, and utilities.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "adapter-tests",
+      "category": "Testing",
+      "feature": "First-party adapter automated tests",
+      "surfaceType": "public-sdk",
+      "ownerArea": "transport and DIT adapters",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-transport-polling/src/polling-transport.test.ts",
+        "packages/chat-provider-dit/src/dit-transport.test.ts",
+        "packages/chat-provider-dit/vitest.config.ts"
+      ],
+      "notes": "Polling and DIT adapter behavior are covered by focused Vitest suites.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "react-package-tests",
+      "category": "Testing",
+      "feature": "@kaira/chat-react automated tests",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-react",
+      "publicSurface": true,
+      "status": "missing",
+      "backing": "none",
+      "evidence": ["packages/chat-react/package.json", "packages/chat-react/src/index.ts"],
+      "notes": "The public React runtime exists, but the package test script is currently `echo 'no tests'` and there are no checked-in tests for provider or hook behavior.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "ui-devtools-package-tests",
+      "category": "Testing",
+      "feature": "@kaira/chat-ui and @kaira/chat-devtools automated tests",
+      "surfaceType": "public-sdk",
+      "ownerArea": "UI and devtools packages",
+      "publicSurface": true,
+      "status": "missing",
+      "backing": "none",
+      "evidence": [
+        "packages/chat-ui/package.json",
+        "packages/chat-devtools/package.json",
+        "packages/chat-devtools/src/index.ts"
+      ],
+      "notes": "Both packages ship runtime behavior, but their current test scripts are `echo 'no tests'` and there are no checked-in automated tests.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "demo-app-tests",
+      "category": "Testing",
+      "feature": "apps/web automated tests",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web",
+      "publicSurface": false,
+      "status": "missing",
+      "backing": "none",
+      "evidence": [
+        "apps/web/package.json",
+        "apps/web/app/api/chat/messages/route.ts",
+        "apps/web/components/chat/Chat.tsx"
+      ],
+      "notes": "The demo app has source-backed runtime and route behavior, but there are no checked-in route, integration, or end-to-end tests.",
+      "roadmapCandidate": true
+    },
+    {
+      "id": "consumer-docs-tests",
+      "category": "Testing",
+      "feature": "apps/docs automated tests",
+      "surfaceType": "consumer-docs",
+      "ownerArea": "apps/docs",
+      "publicSurface": false,
+      "status": "missing",
+      "backing": "none",
+      "evidence": [
+        "apps/docs/package.json",
+        "apps/docs/components/docs/search.tsx",
+        "apps/docs/lib/search-data.ts"
+      ],
+      "notes": "The docs app is built and typechecked, but there are no automated tests for navigation, search behavior, or content integrity.",
+      "roadmapCandidate": true
+    }
+  ]
+}

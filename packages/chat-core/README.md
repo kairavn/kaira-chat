@@ -17,8 +17,7 @@ const engine = new ChatEngine();
 
 await engine.connect();
 
-await engine.sendMessage({
-  conversationId: 'demo-room',
+await engine.sendMessage('demo-room', {
   type: 'text',
   content: 'Hello world',
 });
