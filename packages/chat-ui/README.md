@@ -11,15 +11,24 @@ npm install @kaira/chat-ui @kaira/chat-react @kaira/chat-core react react-dom
 ## Quick Start
 
 ```tsx
-import { MessageInput } from '@kaira/chat-ui';
+import { MessageInput, TypingIndicator } from '@kaira/chat-ui';
 
 export function Composer(): JSX.Element {
   return (
-    <MessageInput
-      onSend={async (content) => {
-        console.log('submit', content);
-      }}
-    />
+    <>
+      <TypingIndicator participants={[]} />
+      <MessageInput
+        onValueChange={(value) => {
+          console.log('draft', value);
+        }}
+        onBlur={() => {
+          console.log('composer blurred');
+        }}
+        onSend={async (content) => {
+          console.log('submit', content);
+        }}
+      />
+    </>
   );
 }
 ```

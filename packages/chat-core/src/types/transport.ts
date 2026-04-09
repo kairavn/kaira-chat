@@ -1,11 +1,17 @@
 import type { Unsubscribe } from './common.js';
 import type { ConnectionState } from './event.js';
 import type { Message } from './message.js';
+import type { TypingTransportPayload } from './typing.js';
+
+/** Optional capability declaration for transport adapters. */
+export interface TransportCapabilities {
+  readonly typing?: boolean;
+}
 
 /** Category of a transport-level event. */
 export interface TransportEventMap {
   readonly message: Message;
-  readonly typing: Record<string, unknown>;
+  readonly typing: TypingTransportPayload;
   readonly status: {
     readonly state: ConnectionState;
   };
@@ -35,6 +41,7 @@ export interface ITransport<
   TInbound extends TransportEvent = TransportEvent,
   TOutbound extends TransportEvent = TransportEvent,
 > {
+  readonly capabilities?: TransportCapabilities;
   /** Open the transport connection. */
   connect(): Promise<void>;
 

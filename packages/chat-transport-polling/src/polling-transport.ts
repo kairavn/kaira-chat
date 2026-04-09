@@ -1,4 +1,10 @@
-import type { ConnectionState, ITransport, TransportEvent, Unsubscribe } from '@kaira/chat-core';
+import type {
+  ConnectionState,
+  ITransport,
+  TransportCapabilities,
+  TransportEvent,
+  Unsubscribe,
+} from '@kaira/chat-core';
 
 /**
  * Callback that returns inbound transport events from an external source.
@@ -26,6 +32,7 @@ export interface PollingTransportConfig<
   TInbound extends TransportEvent = TransportEvent,
   TOutbound extends TransportEvent = TransportEvent,
 > {
+  readonly capabilities?: TransportCapabilities;
   /** Poll interval in milliseconds. Defaults to 2000ms. */
   readonly intervalMs?: number;
   /** Poll function returning zero or more transport events. */
@@ -45,6 +52,7 @@ export class PollingTransport<
   TInbound extends TransportEvent = TransportEvent,
   TOutbound extends TransportEvent = TransportEvent,
 > implements ITransport<TInbound, TOutbound> {
+  readonly capabilities: TransportCapabilities | undefined;
   private readonly config: PollingTransportConfig<TInbound, TOutbound>;
   private readonly messageHandlers = new Set<(event: TInbound) => void>();
   private readonly stateHandlers = new Set<(state: ConnectionState) => void>();
@@ -57,6 +65,7 @@ export class PollingTransport<
 
   constructor(config: PollingTransportConfig<TInbound, TOutbound>) {
     this.config = config;
+    this.capabilities = config.capabilities;
   }
 
   /**

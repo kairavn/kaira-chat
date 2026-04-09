@@ -1,12 +1,13 @@
 import type { Message, MessageContent } from './message.js';
 
 /** Known provider features used for capability negotiation. */
-export type ProviderFeature = 'send' | 'stream' | 'tools' | 'attachments' | 'metadata';
+export type ProviderFeature = 'send' | 'stream' | 'tools' | 'attachments' | 'metadata' | 'typing';
 
 /** Provider capability declaration exposed to consumers. */
 export interface ProviderCapabilities {
   readonly send: boolean;
   readonly stream: boolean;
+  readonly typing?: boolean;
   readonly features?: ReadonlyArray<ProviderFeature>;
 }
 

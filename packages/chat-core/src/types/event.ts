@@ -2,6 +2,7 @@ import type { Conversation } from './conversation.js';
 import type { ChatError } from './error.js';
 import type { AIMessage, Message, MessageStatus } from './message.js';
 import type { Participant } from './participant.js';
+import type { TypingParticipantState, TypingStopReason } from './typing.js';
 
 /** Connection lifecycle state. */
 export type ConnectionState =
@@ -52,8 +53,17 @@ export interface ChatEventMap {
     readonly conversationId: string;
     readonly error: ChatError;
   };
-  'typing:start': { readonly conversationId: string; readonly participant: Participant };
-  'typing:stop': { readonly conversationId: string; readonly participant: Participant };
+  'typing:start': {
+    readonly conversationId: string;
+    readonly participant: Participant;
+    readonly typing: TypingParticipantState;
+  };
+  'typing:stop': {
+    readonly conversationId: string;
+    readonly participant: Participant;
+    readonly typing: TypingParticipantState;
+    readonly reason: TypingStopReason;
+  };
   'conversation:created': { readonly conversation: Conversation };
   'conversation:updated': { readonly conversation: Conversation; readonly previous: Conversation };
   'conversation:deleted': { readonly conversationId: string };

@@ -88,6 +88,23 @@
       "roadmapCandidate": true
     },
     {
+      "id": "core-typing-runtime",
+      "category": "Core Runtime",
+      "feature": "Typing indicators",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-core",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-core/src/engine/chat-engine.ts",
+        "packages/chat-core/src/types/typing.ts",
+        "packages/chat-core/src/engine/chat-engine.test.ts"
+      ],
+      "notes": "Core provides ephemeral conversation-scoped typing state, typed transport payloads, TTL expiry, throttled outbound emits, and selectors without persisting typing history.",
+      "roadmapCandidate": false
+    },
+    {
       "id": "storage-contract",
       "category": "Contracts & Extensibility",
       "feature": "Storage contract (IStorage)",
@@ -249,6 +266,23 @@
       "roadmapCandidate": true
     },
     {
+      "id": "react-typing-hooks",
+      "category": "React / UI / Devtools",
+      "feature": "React typing hooks",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-react",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-react/src/useTypingState.ts",
+        "packages/chat-react/src/useTypingController.ts",
+        "packages/chat-react/src/useTyping.test.tsx"
+      ],
+      "notes": "Conversation-scoped typing state, participant selectors, boolean selectors, and composer controls are exported and covered by focused hook tests.",
+      "roadmapCandidate": false
+    },
+    {
       "id": "default-renderers",
       "category": "React / UI / Devtools",
       "feature": "Default UI renderers",
@@ -264,6 +298,23 @@
       ],
       "notes": "Built-in renderers cover text, image, file, system, and ai messages. Tool-call, tool-result, and custom message defaults are not present.",
       "roadmapCandidate": true
+    },
+    {
+      "id": "typing-indicator-ui",
+      "category": "React / UI / Devtools",
+      "feature": "Typing indicator UI primitive",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-ui",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-ui/src/TypingIndicator.tsx",
+        "packages/chat-ui/src/MessageInput.tsx",
+        "packages/chat-ui/src/index.ts"
+      ],
+      "notes": "The UI package now ships a reusable participant-aware typing indicator plus composer callbacks for draft and blur events without coupling the component to engine state.",
+      "roadmapCandidate": false
     },
     {
       "id": "devtools-panel",
@@ -328,6 +379,23 @@
       ],
       "notes": "The UI shows a thinking state and can render stream previews, but the main DIT-backed runtime path does not emit message:stream events.",
       "roadmapCandidate": true
+    },
+    {
+      "id": "demo-typing-ux",
+      "category": "Demo App",
+      "feature": "Demo typing indicators",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "apps/web/components/chat/Chat.tsx",
+        "apps/web/lib/chat/engine.ts",
+        "apps/web/app/api/chat/typing/route.ts"
+      ],
+      "notes": "The demo browser runtime emits and polls typing events through Next.js routes and the in-memory broker. DIT remains message-only, so provider-side assistant typing is not synthesized.",
+      "roadmapCandidate": false
     },
     {
       "id": "demo-sse-route",

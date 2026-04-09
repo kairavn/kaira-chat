@@ -24,15 +24,25 @@ export interface MessageInputProps {
   readonly disabled?: boolean;
   readonly placeholder?: string;
   readonly onSend: (text: string) => Promise<void> | void;
+  readonly onValueChange?: (text: string) => void;
+  readonly onBlur?: () => void;
 }
 ```
 
 ## ThinkingIndicator
 
-Lightweight component for streaming/typing feedback.
+Lightweight component for streaming/AI-thinking feedback.
 
 ```tsx
 <ThinkingIndicator />
+```
+
+## TypingIndicator
+
+Participant-aware typing indicator for ephemeral remote typing state.
+
+```tsx
+<TypingIndicator participants={typingParticipants} />
 ```
 
 ## Typical Composition
@@ -40,5 +50,6 @@ Lightweight component for streaming/typing feedback.
 ```tsx
 <MessageRenderer message={message} conversation={conversation} registry={registry} />
 <ThinkingIndicator />
-<MessageInput onSend={handleSend} />
+<TypingIndicator participants={typingParticipants} />
+<MessageInput onValueChange={handleDraftChange} onBlur={handleBlur} onSend={handleSend} />
 ```

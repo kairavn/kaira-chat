@@ -1,17 +1,18 @@
 'use client';
 
-import type { Conversation, Message } from '@kaira/chat-core';
+import type { Conversation, Message, TypingParticipantState } from '@kaira/chat-core';
 import type { RendererRegistry } from '@kaira/chat-ui';
 
 import { memo, useMemo } from 'react';
 
-import { MessageRenderer, ThinkingIndicator } from '@kaira/chat-ui';
+import { MessageRenderer, ThinkingIndicator, TypingIndicator } from '@kaira/chat-ui';
 
 interface MessageListProps {
   readonly messages: ReadonlyArray<Message>;
   readonly conversation?: Conversation;
   readonly streamingPreview?: Message;
   readonly showThinkingIndicator?: boolean;
+  readonly typingParticipants?: ReadonlyArray<TypingParticipantState>;
   readonly registry: RendererRegistry;
 }
 
@@ -20,6 +21,7 @@ export const MessageList = memo(function MessageList({
   conversation,
   streamingPreview,
   showThinkingIndicator = false,
+  typingParticipants = [],
   registry,
 }: MessageListProps) {
   const viewMessages = useMemo(
@@ -27,7 +29,7 @@ export const MessageList = memo(function MessageList({
     [messages, streamingPreview],
   );
 
-  if (viewMessages.length === 0 && !showThinkingIndicator) {
+  if (viewMessages.length === 0 && !showThinkingIndicator && typingParticipants.length === 0) {
     return (
       <div
         style={{
@@ -91,6 +93,22 @@ export const MessageList = memo(function MessageList({
           }}
         >
           <ThinkingIndicator />
+        </li>
+      ) : null}
+      {typingParticipants.length > 0 ? (
+        <li
+          style={{
+            listStyle: 'none',
+            borderRadius: 12,
+            padding: '10px 12px',
+            background: '#111827',
+            color: '#cbd5e1',
+            maxWidth: '85%',
+            alignSelf: 'flex-start',
+            border: '1px solid #374151',
+          }}
+        >
+          <TypingIndicator participants={typingParticipants} />
         </li>
       ) : null}
     </ul>

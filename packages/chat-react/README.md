@@ -12,7 +12,14 @@ npm install @kaira/chat-react @kaira/chat-core react react-dom
 
 ```tsx
 import { ChatEngine } from '@kaira/chat-core';
-import { ChatProvider, useMessages, useSendMessage } from '@kaira/chat-react';
+import {
+  ChatProvider,
+  useMessages,
+  useSendMessage,
+  useTypingController,
+  useTypingParticipants,
+} from '@kaira/chat-react';
+import { MessageInput, TypingIndicator } from '@kaira/chat-ui';
 
 const engine = new ChatEngine();
 const conversationId = 'demo-room';
@@ -20,19 +27,32 @@ const conversationId = 'demo-room';
 function ChatScreen(): JSX.Element {
   const messages = useMessages(conversationId);
   const sendMessage = useSendMessage();
+  const typingParticipants = useTypingParticipants(conversationId);
+  const { notifyTyping, stopTyping } = useTypingController(conversationId);
 
   return (
-    <button
-      type="button"
-      onClick={() =>
-        sendMessage(conversationId, {
-          type: 'text',
-          content: 'Hello world',
-        })
-      }
-    >
-      Send ({messages.length})
-    </button>
+    <>
+      <div>Messages: {messages.length}</div>
+      <TypingIndicator participants={typingParticipants} />
+      <MessageInput
+        onValueChange={(text) => {
+          if (text.trim()) {
+            notifyTyping();
+            return;
+          }
+
+          stopTyping();
+        }}
+        onBlur={stopTyping}
+        onSend={async (text) => {
+          stopTyping();
+          await sendMessage(conversationId, {
+            type: 'text',
+            content: text,
+          });
+        }}
+      />
+    </>
   );
 }
 
@@ -44,6 +64,13 @@ export function App(): JSX.Element {
   );
 }
 ```
+
+Additional typing hooks:
+
+- `useTypingState(conversationId)`
+- `useTypingParticipants(conversationId, options?)`
+- `useIsTyping(conversationId, participantId?)`
+- `useTypingController(conversationId)`
 
 ## Documentation
 

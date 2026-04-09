@@ -11,8 +11,9 @@ import { ChatEngine } from './chat-engine.js';
 // ---------------------------------------------------------------------------
 // Mock transport
 // ---------------------------------------------------------------------------
-function createMockTransport(): ITransport & {
+function createMockTransport(supportsTyping: boolean = true): ITransport & {
   simulateMessage(msg: Record<string, unknown>): void;
+  simulateTyping(event: TransportEvent<'typing'>['payload']): void;
   simulateStateChange(state: ConnectionState): void;
   getMessageHandlerCount(): number;
 } {
@@ -21,6 +22,9 @@ function createMockTransport(): ITransport & {
   let state: ConnectionState = 'disconnected';
 
   return {
+    capabilities: {
+      ...(supportsTyping ? { typing: true } : {}),
+    },
     connect: vi.fn(async () => {
       state = 'connected';
     }),
@@ -44,6 +48,11 @@ function createMockTransport(): ITransport & {
     simulateMessage(payload) {
       for (const h of messageHandlers) {
         h({ type: 'message', payload, timestamp: Date.now() });
+      }
+    },
+    simulateTyping(payload) {
+      for (const h of messageHandlers) {
+        h({ type: 'typing', payload, timestamp: Date.now() });
       }
     },
     simulateStateChange(s) {
@@ -311,7 +320,8 @@ describe('ChatEngine — with transport & storage', () => {
       content: 'hello from remote',
     });
 
-    await flushAsyncHandlers();
+    await Promise.resolve();
+    await Promise.resolve();
     expect(handler).toHaveBeenCalledOnce();
     await engine.disconnect();
   });
@@ -444,6 +454,201 @@ describe('ChatEngine — AI streaming', () => {
       messageId: 'm1',
       conversationId: 'c1',
     });
+  });
+});
+
+describe('ChatEngine — typing', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('notifyTyping emits an immediate start, throttles transport sends, and auto-stops after idle', async () => {
+    const transport = createMockTransport();
+    const engine = new ChatEngine({
+      transport,
+      sender: { id: 'user-1', role: 'user' },
+      typing: {
+        emitThrottleMs: 2000,
+        idleTimeoutMs: 1500,
+      },
+    });
+    const startHandler = vi.fn();
+    const stopHandler = vi.fn();
+
+    engine.on('typing:start', startHandler);
+    engine.on('typing:stop', stopHandler);
+    await engine.connect();
+
+    engine.notifyTyping('c1');
+    engine.notifyTyping('c1');
+
+    expect(startHandler).toHaveBeenCalledOnce();
+    expect(transport.send).toHaveBeenCalledOnce();
+    expect(transport.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'typing',
+        payload: expect.objectContaining({
+          action: 'start',
+          conversationId: 'c1',
+        }),
+      }),
+    );
+
+    await vi.advanceTimersByTimeAsync(1499);
+    expect(stopHandler).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(stopHandler).toHaveBeenCalledOnce();
+    expect(stopHandler.mock.calls[0]?.[0]).toMatchObject({
+      conversationId: 'c1',
+      reason: 'explicit',
+    });
+    expect(transport.send).toHaveBeenCalledTimes(2);
+    expect(transport.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        type: 'typing',
+        payload: expect.objectContaining({
+          action: 'stop',
+          conversationId: 'c1',
+        }),
+      }),
+    );
+  });
+
+  it('stopTyping emits explicit stop and cancels idle timers', async () => {
+    const transport = createMockTransport();
+    const engine = new ChatEngine({
+      transport,
+      sender: { id: 'user-1', role: 'user' },
+    });
+    const stopHandler = vi.fn();
+    engine.on('typing:stop', stopHandler);
+
+    await engine.connect();
+    engine.notifyTyping('c1');
+    engine.stopTyping('c1');
+
+    expect(stopHandler).toHaveBeenCalledOnce();
+    expect(stopHandler.mock.calls[0]?.[0]).toMatchObject({
+      conversationId: 'c1',
+      reason: 'explicit',
+    });
+
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(stopHandler).toHaveBeenCalledOnce();
+  });
+
+  it('refreshes remote typing TTL without duplicate typing:start events', async () => {
+    const transport = createMockTransport();
+    const engine = new ChatEngine({
+      transport,
+      sender: { id: 'self', role: 'user' },
+      typing: {
+        remoteTtlMs: 1000,
+      },
+    });
+    const startHandler = vi.fn();
+    engine.on('typing:start', startHandler);
+
+    await engine.connect();
+    transport.simulateTyping({
+      action: 'start',
+      conversationId: 'c1',
+      participant: { id: 'remote-1', role: 'user' },
+    });
+    transport.simulateTyping({
+      action: 'start',
+      conversationId: 'c1',
+      participant: { id: 'remote-1', role: 'user' },
+    });
+
+    expect(startHandler).toHaveBeenCalledOnce();
+    expect(engine.isTyping('c1', 'remote-1')).toBe(true);
+  });
+
+  it('expires remote typing state with expired reason', async () => {
+    const transport = createMockTransport();
+    const engine = new ChatEngine({
+      transport,
+      sender: { id: 'self', role: 'user' },
+      typing: {
+        remoteTtlMs: 1000,
+      },
+    });
+    const stopHandler = vi.fn();
+    engine.on('typing:stop', stopHandler);
+
+    await engine.connect();
+    transport.simulateTyping({
+      action: 'start',
+      conversationId: 'c1',
+      participant: { id: 'remote-1', role: 'user' },
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(stopHandler).toHaveBeenCalledOnce();
+    expect(stopHandler.mock.calls[0]?.[0]).toMatchObject({
+      conversationId: 'c1',
+      reason: 'expired',
+    });
+    expect(engine.isTyping('c1', 'remote-1')).toBe(false);
+  });
+
+  it('clears typing state when matching participant sends a message', async () => {
+    const transport = createMockTransport();
+    const engine = new ChatEngine({
+      transport,
+      sender: { id: 'self', role: 'user' },
+    });
+    const stopHandler = vi.fn();
+    engine.on('typing:stop', stopHandler);
+
+    await engine.connect();
+    transport.simulateTyping({
+      action: 'start',
+      conversationId: 'c1',
+      participant: { id: 'remote-1', role: 'user' },
+    });
+    transport.simulateMessage({
+      id: 'm-remote',
+      conversationId: 'c1',
+      sender: { id: 'remote-1', role: 'user' },
+      timestamp: Date.now(),
+      status: 'sent',
+      type: 'text',
+      content: 'hello',
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(stopHandler).toHaveBeenCalledOnce();
+    expect(stopHandler.mock.calls[0]?.[0]).toMatchObject({
+      conversationId: 'c1',
+      reason: 'message',
+    });
+    expect(engine.isTyping('c1', 'remote-1')).toBe(false);
+  });
+
+  it('degrades gracefully when transport typing is unsupported', () => {
+    const transport = createMockTransport(false);
+    const engine = new ChatEngine({
+      transport,
+      sender: { id: 'user-1', role: 'user' },
+    });
+    const startHandler = vi.fn();
+
+    engine.on('typing:start', startHandler);
+    engine.notifyTyping('c1');
+
+    expect(engine.supportsTyping()).toBe(false);
+    expect(startHandler).toHaveBeenCalledOnce();
+    expect(transport.send).not.toHaveBeenCalled();
   });
 });
 

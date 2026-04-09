@@ -11,6 +11,8 @@ export interface MessageInputProps {
   readonly disabled?: boolean;
   readonly placeholder?: string;
   readonly onSend: (text: string) => Promise<void> | void;
+  readonly onValueChange?: (text: string) => void;
+  readonly onBlur?: () => void;
 }
 
 /**
@@ -20,6 +22,8 @@ export function MessageInput({
   disabled = false,
   placeholder = 'Type your message...',
   onSend,
+  onValueChange,
+  onBlur,
 }: MessageInputProps): JSX.Element {
   const [value, setValue] = useState<string>('');
 
@@ -27,6 +31,7 @@ export function MessageInput({
     const text = value.trim();
     if (!text || disabled) return;
     setValue('');
+    onValueChange?.('');
     await onSend(text);
   };
 
@@ -45,6 +50,7 @@ export function MessageInput({
         value={value}
         onChange={(event) => {
           setValue(event.target.value);
+          onValueChange?.(event.target.value);
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey) {
@@ -52,6 +58,7 @@ export function MessageInput({
             void submit();
           }
         }}
+        onBlur={onBlur}
         placeholder={placeholder}
         disabled={disabled}
         rows={1}

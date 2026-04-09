@@ -11,6 +11,8 @@ import {
   useOptimisticMessages,
   useSendMessage,
   useStreamingMessage,
+  useTypingController,
+  useTypingParticipants,
 } from '@kaira/chat-react';
 import { MessageInput } from '@kaira/chat-ui';
 
@@ -35,6 +37,8 @@ export function Chat() {
   const { message: streamingPreview, isStreaming } = useStreamingMessage(conversationId);
   const { mergedMessages, addOptimisticMessage, reconcileMessage } =
     useOptimisticMessages(messages);
+  const remoteTypingParticipants = useTypingParticipants(conversationId);
+  const { notifyTyping, stopTyping } = useTypingController(conversationId);
   const rendererRegistry = useMemo(() => getRendererRegistry(), []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef<boolean>(true);
@@ -87,7 +91,13 @@ export function Chat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [mergedMessages, streamingPreview?.content, isThinking, scrollToBottom]);
+  }, [
+    mergedMessages,
+    streamingPreview?.content,
+    isThinking,
+    remoteTypingParticipants,
+    scrollToBottom,
+  ]);
 
   const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>): void => {
     const element = event.currentTarget;
@@ -121,6 +131,7 @@ export function Chat() {
 
       addOptimisticMessage(optimisticMessage, nonce);
       setError(null);
+      stopTyping();
       setIsThinking(true);
       setThinkingSince(optimisticTimestamp);
       setIsSending(true);
@@ -140,7 +151,7 @@ export function Chat() {
         setIsSending(false);
       }
     },
-    [addOptimisticMessage, conversationId, scrollToBottom, sendMessage, senderId],
+    [addOptimisticMessage, conversationId, scrollToBottom, sendMessage, senderId, stopTyping],
   );
 
   return (
@@ -186,12 +197,22 @@ export function Chat() {
           conversation={conversation}
           streamingPreview={streamingPreview}
           showThinkingIndicator={isThinking && !isStreaming}
+          typingParticipants={remoteTypingParticipants}
           registry={rendererRegistry}
         />
       </ScrollContainer>
 
       <MessageInput
         disabled={isSending}
+        onValueChange={(text) => {
+          if (text.trim()) {
+            notifyTyping();
+            return;
+          }
+
+          stopTyping();
+        }}
+        onBlur={stopTyping}
         onSend={sendUserMessage}
       />
     </section>

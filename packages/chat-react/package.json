@@ -30,7 +30,8 @@
     "check-types": "tsc --project tsconfig.json --noEmit",
     "lint": "eslint . --max-warnings 0",
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
-    "test": "echo 'no tests'"
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
     "@kaira/chat-core": "workspace:*"
@@ -41,11 +42,14 @@
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^22.19.15",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
-    "typescript": "^5.9.3"
+    "jsdom": "^29.0.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=18"

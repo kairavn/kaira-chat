@@ -50,6 +50,8 @@ async function buildContext(): Promise<ServerChatEngineContext> {
   engine.on('message:stream:chunk', forwardEvent);
   engine.on('message:stream:end', forwardEvent);
   engine.on('message:stream:error', forwardEvent);
+  engine.on('typing:start', forwardEvent);
+  engine.on('typing:stop', forwardEvent);
 
   return {
     engine,
@@ -103,6 +105,22 @@ export async function sendChatMessage(
     content: text,
     ...(metadata ? { metadata } : {}),
   });
+}
+
+/**
+ * Starts conversation-scoped typing on the server-owned engine.
+ */
+export async function notifyChatTyping(conversationId: string): Promise<void> {
+  const { engine } = await getServerChatEngineContext();
+  engine.notifyTyping(conversationId);
+}
+
+/**
+ * Stops conversation-scoped typing on the server-owned engine.
+ */
+export async function stopChatTyping(conversationId: string): Promise<void> {
+  const { engine } = await getServerChatEngineContext();
+  engine.stopTyping(conversationId);
 }
 
 /**

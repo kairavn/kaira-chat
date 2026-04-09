@@ -12,6 +12,7 @@ import type { Participant } from './participant.js';
 import type { ChatPlugin } from './plugin.js';
 import type { ConversationQuery, CursorPage, IStorage, MessageQuery } from './storage.js';
 import type { ITransport } from './transport.js';
+import type { ConversationTypingState, TypingConfig } from './typing.js';
 
 /** Configuration for creating a ChatEngine instance. */
 export interface ChatEngineConfig {
@@ -21,6 +22,7 @@ export interface ChatEngineConfig {
   readonly middleware?: ReadonlyArray<Middleware>;
   /** Default sender attached to outgoing messages when no sender is specified. */
   readonly sender?: Participant;
+  readonly typing?: TypingConfig;
 }
 
 /**
@@ -42,6 +44,8 @@ export interface IChatEngine {
 
   // Messages
   sendMessage(conversationId: string, content: MessageContent): Promise<Message>;
+  notifyTyping(conversationId: string): void;
+  stopTyping(conversationId: string): void;
   getMessages(query: MessageQuery): Promise<CursorPage<Message>>;
   updateMessage(id: string, update: Partial<MessageContent>): Promise<Message>;
   deleteMessage(id: string): Promise<void>;
@@ -57,6 +61,10 @@ export interface IChatEngine {
   // State
   getConnectionState(): ConnectionState;
   getConversationState(id: string): ConversationState;
+  getCurrentParticipant(): Participant;
+  getTypingState(conversationId: string): ConversationTypingState;
+  isTyping(conversationId: string, participantId?: string): boolean;
+  supportsTyping(): boolean;
 
   // Plugins
   use(plugin: ChatPlugin): void;

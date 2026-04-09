@@ -49,6 +49,7 @@ export type {
 // Types — transport
 export type {
   ITransport,
+  TransportCapabilities,
   TransportEvent,
   TransportEventMap,
   TransportEventType,
@@ -74,6 +75,18 @@ export type { Middleware, MiddlewareContext, NextFn } from './types/middleware.j
 
 // Types — plugin
 export type { ChatPlugin } from './types/plugin.js';
+
+// Types — typing
+export type {
+  ConversationTypingState,
+  TypingConfig,
+  TypingParticipantSelectorOptions,
+  TypingParticipantState,
+  TypingStateSource,
+  TypingStopReason,
+  TypingTransportAction,
+  TypingTransportPayload,
+} from './types/typing.js';
 
 // Types — message registry
 export type { MessageTypeDefinition } from './message-registry/message-registry.js';
@@ -108,3 +121,4 @@ export {
   mergeMessageSets,
   sortMessagesByTimestamp,
 } from './utils/messages.js';
+export { selectIsTyping, selectTypingParticipants } from './utils/typing.js';

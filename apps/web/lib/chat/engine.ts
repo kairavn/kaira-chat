@@ -1,6 +1,11 @@
 'use client';
 
-import type { Message, MessageMetadata, TransportEvent } from '@kaira/chat-core';
+import type {
+  Message,
+  MessageMetadata,
+  TransportEvent,
+  TypingTransportPayload,
+} from '@kaira/chat-core';
 
 import { ChatEngine, ChatSerializer } from '@kaira/chat-core';
 import { PollingTransport } from '@kaira/chat-transport-polling';
@@ -9,8 +14,12 @@ import { demoConfig } from '@/config/demo';
 
 interface PollEventsResponse {
   readonly success: boolean;
-  readonly data: ReadonlyArray<Message>;
+  readonly data: ReadonlyArray<TransportEvent<'message' | 'typing'>>;
   readonly nextCursor?: string;
+}
+
+interface SendTypingResponse {
+  readonly success: boolean;
 }
 
 const serializer = new ChatSerializer();
@@ -20,6 +29,49 @@ let pollCursor: string | undefined;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isParticipantRole(value: unknown): value is 'user' | 'assistant' | 'system' | 'custom' {
+  return value === 'user' || value === 'assistant' || value === 'system' || value === 'custom';
+}
+
+function isTypingTransportPayload(value: unknown): value is TypingTransportPayload {
+  return (
+    isRecord(value) &&
+    (value['action'] === 'start' || value['action'] === 'stop') &&
+    typeof value['conversationId'] === 'string' &&
+    isRecord(value['participant']) &&
+    typeof value['participant']['id'] === 'string' &&
+    isParticipantRole(value['participant']['role'])
+  );
+}
+
+function parseTransportEvent(value: unknown): TransportEvent<'message' | 'typing'> {
+  if (
+    !isRecord(value) ||
+    typeof value['timestamp'] !== 'number' ||
+    typeof value['type'] !== 'string'
+  ) {
+    throw new Error('Poll response event is invalid');
+  }
+
+  if (value['type'] === 'message') {
+    return {
+      type: 'message',
+      payload: serializer.deserializeMessage(JSON.stringify(value['payload'])),
+      timestamp: value['timestamp'],
+    };
+  }
+
+  if (value['type'] === 'typing' && isTypingTransportPayload(value['payload'])) {
+    return {
+      type: 'typing',
+      payload: value['payload'],
+      timestamp: value['timestamp'],
+    };
+  }
+
+  throw new Error('Poll response event type is unsupported');
 }
 
 function parsePollEventsResponse(value: unknown): PollEventsResponse {
@@ -43,8 +95,18 @@ function parsePollEventsResponse(value: unknown): PollEventsResponse {
 
   return {
     success: value['success'],
-    data: data.map((message) => serializer.deserializeMessage(JSON.stringify(message))),
+    data: data.map((item) => parseTransportEvent(item)),
     ...(nextCursor !== undefined ? { nextCursor } : {}),
+  };
+}
+
+function parseSendTypingResponse(value: unknown): SendTypingResponse {
+  if (!isRecord(value) || typeof value['success'] !== 'boolean') {
+    throw new Error('Typing response must be an object with a boolean success field');
+  }
+
+  return {
+    success: value['success'],
   };
 }
 
@@ -60,12 +122,12 @@ function extractMessageText(message: Message): string {
 }
 
 /**
- * Polls the server-side API route for new messages.
+ * Polls the server-side API route for new message and typing transport events.
  * API keys stay server-only — the client never touches them.
  */
 async function pollServerEvents(
   conversationId: string,
-): Promise<ReadonlyArray<TransportEvent<'message'>>> {
+): Promise<ReadonlyArray<TransportEvent<'message' | 'typing'>>> {
   const searchParams = new URLSearchParams({
     conversationId,
   });
@@ -83,22 +145,17 @@ async function pollServerEvents(
     return [];
   }
 
-  const nextCursor = json.nextCursor ?? json.data.at(-1)?.id;
-  if (nextCursor !== undefined) {
-    pollCursor = nextCursor;
+  if (json.nextCursor !== undefined) {
+    pollCursor = json.nextCursor;
   }
 
-  return json.data.map((message) => ({
-    type: 'message',
-    payload: message,
-    timestamp: message.timestamp,
-  }));
+  return json.data;
 }
 
 /**
  * Sends a message through the server-side API route.
  */
-async function sendToServer(event: TransportEvent<'message'>): Promise<void> {
+async function sendMessageToServer(event: TransportEvent<'message'>): Promise<void> {
   const requestMetadata: MessageMetadata | undefined = event.payload.metadata;
 
   const response = await fetch('/api/chat/messages', {
@@ -118,6 +175,39 @@ async function sendToServer(event: TransportEvent<'message'>): Promise<void> {
 }
 
 /**
+ * Sends a typing update through the server-side API route.
+ */
+async function sendTypingToServer(event: TransportEvent<'typing'>): Promise<void> {
+  const response = await fetch('/api/chat/typing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: event.payload.action,
+      conversationId: event.payload.conversationId,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Typing failed (${response.status}): ${text}`);
+  }
+
+  const json = parseSendTypingResponse(await response.json());
+  if (!json.success) {
+    throw new Error('Typing update returned unsuccessful response');
+  }
+}
+
+async function sendToServer(event: TransportEvent<'message' | 'typing'>): Promise<void> {
+  if (event.type === 'message') {
+    await sendMessageToServer(event);
+    return;
+  }
+
+  await sendTypingToServer(event);
+}
+
+/**
  * Creates or returns a singleton ChatEngine for the browser runtime.
  * All DIT API calls are proxied through Next.js API routes — no API keys on the client.
  */
@@ -129,7 +219,13 @@ export function getChatEngine(): ChatEngine {
   pollCursor = undefined;
   const { chatroomId: conversationId, senderId } = demoConfig;
 
-  const transport = new PollingTransport({
+  const transport = new PollingTransport<
+    TransportEvent<'message' | 'typing'>,
+    TransportEvent<'message' | 'typing'>
+  >({
+    capabilities: {
+      typing: true,
+    },
     intervalMs: 2000,
     poll: () => pollServerEvents(conversationId),
     send: sendToServer,

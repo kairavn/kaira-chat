@@ -9,6 +9,9 @@ export interface ITransport<
   TInbound extends TransportEvent = TransportEvent,
   TOutbound extends TransportEvent = TransportEvent,
 > {
+  readonly capabilities?: {
+    readonly typing?: boolean;
+  };
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   send(event: TOutbound): Promise<void>;
@@ -20,7 +23,17 @@ export interface ITransport<
 
 `TransportEvent` is a discriminated generic built from `TransportEventMap`.
 Most adapters narrow this to the specific event types they actually handle,
-for example `TransportEvent<'message'>`.
+for example `TransportEvent<'message'>` or `TransportEvent<'message' | 'typing'>`.
+
+`TransportEventMap['typing']` uses the exported `TypingTransportPayload` shape:
+
+```ts
+interface TypingTransportPayload {
+  readonly action: 'start' | 'stop';
+  readonly conversationId: string;
+  readonly participant: Participant;
+}
+```
 
 ## Custom WebSocket Transport Example
 
@@ -120,6 +133,9 @@ Use the provided adapter:
 import { PollingTransport } from '@kaira/chat-transport-polling';
 
 const transport = new PollingTransport({
+  capabilities: {
+    typing: true,
+  },
   intervalMs: 2000,
   pollImmediately: true,
   poll: async () => [],

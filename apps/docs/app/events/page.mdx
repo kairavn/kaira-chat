@@ -39,7 +39,17 @@ type StreamErrorEvent = ChatEvent<'message:stream:error'>;
 
 type ConnectionStateEvent = ChatEvent<'connection:state'>;
 // { type, timestamp, state, previousState }
+
+type TypingStartEvent = ChatEvent<'typing:start'>;
+// { type, timestamp, conversationId, participant, typing }
+
+type TypingStopEvent = ChatEvent<'typing:stop'>;
+// { type, timestamp, conversationId, participant, typing, reason }
 ```
+
+Typing events are conversation-scoped and ephemeral. Repeated inbound `typing:start`
+updates refresh TTL in core without re-emitting duplicate start events for the same
+participant.
 
 ## Subscribe Example
 

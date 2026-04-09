@@ -9,19 +9,33 @@ import type {
   ConversationState,
 } from '../types/event.js';
 import type { Message, MessageContent, MessageMetadata, MessageStatus } from '../types/message.js';
+import type { Participant } from '../types/participant.js';
 import type { ChatPlugin } from '../types/plugin.js';
 import type { ConversationQuery, CursorPage, IStorage, MessageQuery } from '../types/storage.js';
-import type { ITransport } from '../types/transport.js';
+import type { ITransport, TransportEvent } from '../types/transport.js';
+import type {
+  ConversationTypingState,
+  TypingConfig,
+  TypingParticipantState,
+  TypingStopReason,
+  TypingTransportPayload,
+} from '../types/typing.js';
 
 import { EventBus } from '../event-bus/event-bus.js';
 import { MessageRegistry } from '../message-registry/message-registry.js';
 import { MiddlewarePipeline } from '../middleware/pipeline.js';
 import { ConnectionStateMachine } from '../state/connection-state.js';
 import { ConversationStateMachine } from '../state/conversation-state.js';
+import { TypingStateStore } from '../state/typing-state.js';
 import { createChatError } from '../types/error.js';
 import { generateId } from '../utils/id.js';
 
 const MESSAGE_INDEX_MAX = 10_000;
+const DEFAULT_TYPING_CONFIG = {
+  emitThrottleMs: 2000,
+  idleTimeoutMs: 1500,
+  remoteTtlMs: 6000,
+} satisfies Required<TypingConfig>;
 type ConnectionTransitionAction =
   | 'connect'
   | 'onOpen'
@@ -30,6 +44,42 @@ type ConnectionTransitionAction =
   | 'disconnect'
   | 'retry'
   | 'maxRetries';
+
+function isParticipantRole(value: unknown): value is Participant['role'] {
+  return value === 'user' || value === 'assistant' || value === 'system' || value === 'custom';
+}
+
+function isParticipant(value: unknown): value is Participant {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'role' in value &&
+    isParticipantRole(value.role)
+  );
+}
+
+function isTypingTransportPayload(value: unknown): value is TypingTransportPayload {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'action' in value &&
+    (value.action === 'start' || value.action === 'stop') &&
+    'conversationId' in value &&
+    typeof value.conversationId === 'string' &&
+    'participant' in value &&
+    isParticipant(value.participant)
+  );
+}
+
+function isMessageTransportEvent(event: TransportEvent): event is TransportEvent<'message'> {
+  return event.type === 'message';
+}
+
+function isTypingTransportEvent(event: TransportEvent): event is TransportEvent<'typing'> {
+  return event.type === 'typing';
+}
 
 function getClientNonceFromMetadata(metadata: MessageMetadata | undefined): string | undefined {
   return typeof metadata?.clientNonce === 'string' ? metadata.clientNonce : undefined;
@@ -317,16 +367,16 @@ export class ChatEngine implements IChatEngine {
   private readonly storage?: IStorage;
   private readonly plugins: ChatPlugin[] = [];
   private readonly installedPlugins = new WeakSet<ChatPlugin>();
-
-  private readonly defaultSender: {
-    readonly id: string;
-    readonly role: 'user' | 'assistant' | 'system' | 'custom';
-  };
+  private readonly typingState: TypingStateStore;
+  private readonly typingConfig: Required<TypingConfig>;
+  private readonly defaultSender: Participant;
   private readonly inMemoryMessages = new Map<string, Message>();
   private readonly inMemoryConversations = new Map<string, Conversation>();
   private readonly messageIndex = new Set<string>();
   private readonly pendingInboundMessageIds = new Set<string>();
   private readonly messageRegistry = new MessageRegistry();
+  private readonly localTypingIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly typingEmitTimestamps = new Map<string, number>();
 
   private transportUnsubs: Unsubscribe[] = [];
 
@@ -336,6 +386,16 @@ export class ChatEngine implements IChatEngine {
     this.pipeline = new MiddlewarePipeline();
     this.transport = config.transport;
     this.storage = config.storage;
+    this.typingConfig = {
+      emitThrottleMs: config.typing?.emitThrottleMs ?? DEFAULT_TYPING_CONFIG.emitThrottleMs,
+      idleTimeoutMs: config.typing?.idleTimeoutMs ?? DEFAULT_TYPING_CONFIG.idleTimeoutMs,
+      remoteTtlMs: config.typing?.remoteTtlMs ?? DEFAULT_TYPING_CONFIG.remoteTtlMs,
+    };
+    this.typingState = new TypingStateStore({
+      onExpire: (conversationId, participantId) => {
+        this.stopTypingByParticipant(conversationId, participantId, 'expired', Date.now());
+      },
+    });
     this.defaultSender = config.sender ?? { id: 'anonymous', role: 'user' };
     this.registerDefaultMessageTypes();
 
@@ -403,12 +463,14 @@ export class ChatEngine implements IChatEngine {
       const currentState = this.connectionState.state;
       if (currentState === 'disconnected') {
         this.unwireTransport();
+        this.clearTypingRuntime();
         return;
       }
 
       if (currentState === 'connecting') {
         this.syncConnectionState('disconnected');
         this.unwireTransport();
+        this.clearTypingRuntime();
         return;
       }
 
@@ -420,8 +482,12 @@ export class ChatEngine implements IChatEngine {
           this.syncConnectionState('disconnected');
         }
         this.unwireTransport();
+        this.clearTypingRuntime();
       }
+      return;
     }
+
+    this.clearTypingRuntime();
   }
 
   // -----------------------------------------------------------------------
@@ -477,6 +543,7 @@ export class ChatEngine implements IChatEngine {
 
   async sendMessage(conversationId: string, content: MessageContent): Promise<Message> {
     const now = Date.now();
+    this.stopTypingByParticipant(conversationId, this.defaultSender.id, 'message', now);
     const message = createOutgoingMessage(
       conversationId,
       content,
@@ -525,6 +592,43 @@ export class ChatEngine implements IChatEngine {
     });
 
     return sentMessage;
+  }
+
+  notifyTyping(conversationId: string): void {
+    const now = Date.now();
+    const update = this.typingState.upsertLocalState({
+      conversationId,
+      participant: this.defaultSender,
+      now,
+    });
+
+    if (update.didStart) {
+      this.emitTypingStart(update.state, now);
+    }
+
+    this.scheduleLocalTypingIdleStop(conversationId);
+    if (!this.supportsTyping()) {
+      return;
+    }
+
+    const previousEmitAt = this.typingEmitTimestamps.get(conversationId);
+    if (previousEmitAt !== undefined && now - previousEmitAt < this.typingConfig.emitThrottleMs) {
+      return;
+    }
+
+    this.typingEmitTimestamps.set(conversationId, now);
+    void this.sendTransportTypingEvent(
+      {
+        action: 'start',
+        conversationId,
+        participant: this.defaultSender,
+      },
+      now,
+    );
+  }
+
+  stopTyping(conversationId: string): void {
+    this.stopTypingByParticipant(conversationId, this.defaultSender.id, 'explicit', Date.now());
   }
 
   async getMessages(query: MessageQuery): Promise<CursorPage<Message>> {
@@ -686,6 +790,22 @@ export class ChatEngine implements IChatEngine {
     return sm?.state ?? 'active';
   }
 
+  getCurrentParticipant(): Participant {
+    return this.defaultSender;
+  }
+
+  getTypingState(conversationId: string): ConversationTypingState {
+    return this.typingState.getConversationState(conversationId);
+  }
+
+  isTyping(conversationId: string, participantId?: string): boolean {
+    return this.typingState.isTyping(conversationId, participantId);
+  }
+
+  supportsTyping(): boolean {
+    return this.transport?.capabilities?.typing === true;
+  }
+
   // -----------------------------------------------------------------------
   // Plugins
   // -----------------------------------------------------------------------
@@ -724,10 +844,15 @@ export class ChatEngine implements IChatEngine {
     }
 
     const msgUnsub = this.transport.onMessage((transportEvent) => {
-      if (transportEvent.type !== 'message') return;
-      this.handleIncomingTransportMessage(transportEvent.payload).catch((err) => {
+      const handler = isMessageTransportEvent(transportEvent)
+        ? this.handleIncomingTransportMessage(transportEvent.payload)
+        : isTypingTransportEvent(transportEvent)
+          ? this.handleIncomingTransportTyping(transportEvent.payload, transportEvent.timestamp)
+          : Promise.resolve();
+
+      handler.catch((err) => {
         this.emitError(
-          createChatError('transport', 'Failed to handle inbound message', { cause: err }),
+          createChatError('transport', 'Failed to handle inbound transport event', { cause: err }),
         );
       });
     });
@@ -788,6 +913,12 @@ export class ChatEngine implements IChatEngine {
       );
     if (isOwnEchoWithKnownNonce) {
       this.addToMessageIndex(message.id);
+      this.stopTypingByParticipant(
+        message.conversationId,
+        message.sender.id,
+        'message',
+        Date.now(),
+      );
       return;
     }
 
@@ -802,6 +933,12 @@ export class ChatEngine implements IChatEngine {
         this.inMemoryMessages.set(message.id, message);
       }
 
+      this.stopTypingByParticipant(
+        message.conversationId,
+        message.sender.id,
+        'message',
+        Date.now(),
+      );
       this.eventBus.emit('message:received', {
         type: 'message:received',
         timestamp: Date.now(),
@@ -816,6 +953,45 @@ export class ChatEngine implements IChatEngine {
       );
     } finally {
       this.pendingInboundMessageIds.delete(message.id);
+    }
+  }
+
+  private async handleIncomingTransportTyping(
+    payload: TypingTransportPayload,
+    timestamp: number,
+  ): Promise<void> {
+    if (!isTypingTransportPayload(payload)) {
+      this.emitError(
+        createChatError('transport', 'Received malformed typing payload', {
+          metadata: { payload },
+        }),
+      );
+      return;
+    }
+
+    if (payload.participant.id === this.defaultSender.id) {
+      return;
+    }
+
+    if (payload.action === 'stop') {
+      this.stopTypingByParticipant(
+        payload.conversationId,
+        payload.participant.id,
+        'explicit',
+        timestamp,
+      );
+      return;
+    }
+
+    const update = this.typingState.upsertRemoteState({
+      conversationId: payload.conversationId,
+      participant: payload.participant,
+      now: timestamp,
+      ttlMs: this.typingConfig.remoteTtlMs,
+    });
+
+    if (update.didStart) {
+      this.emitTypingStart(update.state, timestamp);
     }
   }
 
@@ -904,5 +1080,116 @@ export class ChatEngine implements IChatEngine {
       unsub();
     }
     this.transportUnsubs = [];
+  }
+
+  private emitTypingStart(typing: TypingParticipantState, timestamp: number): void {
+    this.eventBus.emit('typing:start', {
+      type: 'typing:start',
+      timestamp,
+      conversationId: typing.conversationId,
+      participant: typing.participant,
+      typing,
+    });
+  }
+
+  private emitTypingStop(
+    typing: TypingParticipantState,
+    reason: TypingStopReason,
+    timestamp: number,
+  ): void {
+    this.eventBus.emit('typing:stop', {
+      type: 'typing:stop',
+      timestamp,
+      conversationId: typing.conversationId,
+      participant: typing.participant,
+      typing,
+      reason,
+    });
+  }
+
+  private scheduleLocalTypingIdleStop(conversationId: string): void {
+    const existingTimer = this.localTypingIdleTimers.get(conversationId);
+    if (existingTimer !== undefined) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(() => {
+      this.stopTypingByParticipant(conversationId, this.defaultSender.id, 'explicit', Date.now());
+    }, this.typingConfig.idleTimeoutMs);
+    this.localTypingIdleTimers.set(conversationId, timer);
+  }
+
+  private stopTypingByParticipant(
+    conversationId: string,
+    participantId: string,
+    reason: TypingStopReason,
+    timestamp: number,
+  ): void {
+    const current = this.typingState.getParticipantState(conversationId, participantId);
+    if (!current) {
+      if (participantId === this.defaultSender.id) {
+        this.clearLocalTypingRuntime(conversationId);
+      }
+      return;
+    }
+
+    const removed = this.typingState.stopTyping(conversationId, participantId);
+    if (!removed) {
+      if (participantId === this.defaultSender.id) {
+        this.clearLocalTypingRuntime(conversationId);
+      }
+      return;
+    }
+
+    if (participantId === this.defaultSender.id) {
+      this.clearLocalTypingRuntime(conversationId);
+      if (reason === 'explicit' && current.source === 'local' && this.supportsTyping()) {
+        void this.sendTransportTypingEvent(
+          {
+            action: 'stop',
+            conversationId,
+            participant: this.defaultSender,
+          },
+          timestamp,
+        );
+      }
+    }
+
+    this.emitTypingStop(removed, reason, timestamp);
+  }
+
+  private clearLocalTypingRuntime(conversationId: string): void {
+    const timer = this.localTypingIdleTimers.get(conversationId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.localTypingIdleTimers.delete(conversationId);
+    }
+
+    this.typingEmitTimestamps.delete(conversationId);
+  }
+
+  private clearTypingRuntime(): void {
+    for (const timer of this.localTypingIdleTimers.values()) {
+      clearTimeout(timer);
+    }
+
+    this.localTypingIdleTimers.clear();
+    this.typingEmitTimestamps.clear();
+    this.typingState.clearAll();
+  }
+
+  private async sendTransportTypingEvent(
+    payload: TypingTransportPayload,
+    timestamp: number,
+  ): Promise<void> {
+    if (!this.transport || !this.supportsTyping()) {
+      return;
+    }
+
+    await this.transport.send({
+      type: 'typing',
+      payload,
+      timestamp,
+    });
   }
 }

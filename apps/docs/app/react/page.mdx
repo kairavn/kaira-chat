@@ -24,6 +24,10 @@ export interface ChatProviderProps {
 - `useMessages(conversationId)` -> live + initial message list
 - `useSendMessage()` -> stable send callback
 - `useStreamingMessage(conversationId)` -> transient streaming state
+- `useTypingState(conversationId)` -> full conversation typing snapshot
+- `useTypingParticipants(conversationId, options?)` -> filtered typing participants
+- `useIsTyping(conversationId, participantId?)` -> boolean selector
+- `useTypingController(conversationId)` -> notify/stop helpers plus support flag
 - `useConnectionState()` -> current connection state
 - `useConversation(conversationId)` -> conversation lookup
 - `useOptimisticMessages(messages)` -> optimistic reconciliation helpers
@@ -44,8 +48,10 @@ import {
   useOptimisticMessages,
   useSendMessage,
   useStreamingMessage,
+  useTypingController,
+  useTypingParticipants,
 } from '@kaira/chat-react';
-import { MessageInput, ThinkingIndicator } from '@kaira/chat-ui';
+import { MessageInput, ThinkingIndicator, TypingIndicator } from '@kaira/chat-ui';
 
 export function ChatPanel(props: { readonly conversationId: string }): JSX.Element {
   const { conversationId } = props;
@@ -53,6 +59,8 @@ export function ChatPanel(props: { readonly conversationId: string }): JSX.Eleme
   const { mergedMessages } = useOptimisticMessages(messages);
   const sendMessage = useSendMessage();
   const streaming = useStreamingMessage(conversationId);
+  const typingParticipants = useTypingParticipants(conversationId);
+  const { notifyTyping, stopTyping, isSupported } = useTypingController(conversationId);
 
   return (
     <section>
@@ -66,9 +74,21 @@ export function ChatPanel(props: { readonly conversationId: string }): JSX.Eleme
       </div>
 
       {streaming.isStreaming ? <ThinkingIndicator /> : null}
+      <TypingIndicator participants={typingParticipants} />
 
       <MessageInput
+        onValueChange={(text) => {
+          if (!isSupported) return;
+          if (text.trim()) {
+            notifyTyping();
+            return;
+          }
+
+          stopTyping();
+        }}
+        onBlur={stopTyping}
         onSend={async (text) => {
+          stopTyping();
           await sendMessage(conversationId, { type: 'text', content: text });
         }}
       />
@@ -76,3 +96,6 @@ export function ChatPanel(props: { readonly conversationId: string }): JSX.Eleme
   );
 }
 ```
+
+`useTypingController().isSupported` reports transport typing capability. The hooks still
+work against local engine state when the transport does not support typing updates.
