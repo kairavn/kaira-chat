@@ -12,7 +12,7 @@ This file records important implementation choices and limits that are visible i
 ## Extensibility constraints
 
 - `IProvider` exists only as a type surface today. There is no concrete provider package or `ChatEngine` provider integration. Evidence: `packages/chat-core/src/types/provider.ts`.
-- `IStorage` exists only as an injected contract. There is no first-party storage adapter package. Evidence: `packages/chat-core/src/types/storage.ts`, `packages/`.
+- `IStorage` remains an injected contract in core, and the repo now includes a first-party browser adapter in `@kaira/chat-storage-indexeddb`. Evidence: `packages/chat-core/src/types/storage.ts`, `packages/chat-storage-indexeddb/src/IndexedDBStorage.ts`.
 - Plugin lifecycle support exists in core, but there are no first-party plugin packages. Evidence: `packages/chat-core/src/types/plugin.ts`, `packages/chat-core/src/engine/chat-engine.ts`, `packages/`.
 - Middleware support exists in core, but there is no reusable middleware package in the repo. Evidence: `packages/chat-core/src/middleware/pipeline.ts`, `packages/`.
 

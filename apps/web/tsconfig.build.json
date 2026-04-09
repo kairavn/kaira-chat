@@ -9,7 +9,8 @@
     "strictNullChecks": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@kaira/chat-storage-indexeddb": ["../../packages/chat-storage-indexeddb/src/index.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", "next.config.js", ".next/types/**/*.ts"],

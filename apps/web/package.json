@@ -17,6 +17,7 @@
     "@kaira/chat-devtools": "workspace:*",
     "@kaira/chat-provider-dit": "workspace:*",
     "@kaira/chat-react": "workspace:*",
+    "@kaira/chat-storage-indexeddb": "workspace:*",
     "@kaira/chat-transport-polling": "workspace:*",
     "@kaira/chat-ui": "workspace:*",
     "next": "^16.2.1",

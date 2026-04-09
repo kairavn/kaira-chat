@@ -4,13 +4,13 @@ This document describes the current repository shape and runtime boundaries as r
 
 ## Monorepo structure
 
-| Area                | Role                                                                           | Key paths                                                                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public SDK packages | Runtime, React bindings, UI, devtools, and concrete adapters                   | `packages/chat-core`, `packages/chat-react`, `packages/chat-ui`, `packages/chat-devtools`, `packages/chat-transport-polling`, `packages/chat-provider-dit` |
-| Internal demo app   | Next.js app that proxies the DIT-backed runtime for internal use               | `apps/web`                                                                                                                                                 |
-| Consumer docs app   | Static-export Next.js docs site for SDK consumers                              | `apps/docs`                                                                                                                                                |
-| Tooling             | Root scripts, Turbo, Syncpack, Changesets, ESLint, TS config, GitHub workflows | `package.json`, `turbo.json`, `.syncpackrc.json`, `.changeset`, `.github/workflows`, `packages/eslint-config`, `packages/typescript-config`                |
-| Internal docs       | Implementation guidance, status tracking, and repo safety notes                | `docs/internal`                                                                                                                                            |
+| Area                | Role                                                                           | Key paths                                                                                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public SDK packages | Runtime, React bindings, UI, devtools, and concrete adapters                   | `packages/chat-core`, `packages/chat-react`, `packages/chat-ui`, `packages/chat-devtools`, `packages/chat-storage-indexeddb`, `packages/chat-transport-polling`, `packages/chat-provider-dit` |
+| Internal demo app   | Next.js app that proxies the DIT-backed runtime for internal use               | `apps/web`                                                                                                                                                                                    |
+| Consumer docs app   | Static-export Next.js docs site for SDK consumers                              | `apps/docs`                                                                                                                                                                                   |
+| Tooling             | Root scripts, Turbo, Syncpack, Changesets, ESLint, TS config, GitHub workflows | `package.json`, `turbo.json`, `.syncpackrc.json`, `.changeset`, `.github/workflows`, `packages/eslint-config`, `packages/typescript-config`                                                   |
+| Internal docs       | Implementation guidance, status tracking, and repo safety notes                | `docs/internal`                                                                                                                                                                               |
 
 ## Public SDK boundaries
 
@@ -27,6 +27,7 @@ Current package roles:
 | `@kaira/chat-react`             | React provider and hooks over `ChatEngine`                        | `@kaira/chat-core`                                  |
 | `@kaira/chat-ui`                | Renderer registry and UI primitives                               | `@kaira/chat-core`                                  |
 | `@kaira/chat-devtools`          | Runtime inspection panel for React apps                           | `@kaira/chat-core`, `@kaira/chat-react`             |
+| `@kaira/chat-storage-indexeddb` | Browser-first IndexedDB storage adapter                           | `@kaira/chat-core`, `idb`                           |
 | `@kaira/chat-transport-polling` | Concrete polling transport                                        | `@kaira/chat-core`                                  |
 | `@kaira/chat-provider-dit`      | DIT-specific transport adapter built on polling                   | `@kaira/chat-core`, `@kaira/chat-transport-polling` |
 

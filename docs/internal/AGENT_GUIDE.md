@@ -15,7 +15,7 @@ Manual docs can drift. Treat `apps/docs` and README files as secondary evidence 
 
 ## Workspace boundaries
 
-- Public SDK surface: `packages/chat-core`, `packages/chat-react`, `packages/chat-ui`, `packages/chat-devtools`, `packages/chat-transport-polling`, `packages/chat-provider-dit`
+- Public SDK surface: `packages/chat-core`, `packages/chat-react`, `packages/chat-ui`, `packages/chat-devtools`, `packages/chat-storage-indexeddb`, `packages/chat-transport-polling`, `packages/chat-provider-dit`
 - Internal demo app: `apps/web`
 - Consumer docs app: `apps/docs`
 - Tooling and release workflow: root `package.json`, `turbo.json`, `.syncpackrc.json`, `.changeset/`, `.github/workflows/`, `packages/eslint-config`, `packages/typescript-config`
@@ -72,7 +72,7 @@ Use extra caution with these manually maintained or generated-adjacent files:
 - `@kaira/chat-provider-dit` is a concrete transport adapter. It is not an `IProvider` implementation.
 - The demo browser runtime uses polling through `/api/chat/events`. It does not use SSE today.
 - Streaming helper methods exist in `ChatEngine`, but the demo runtime does not currently emit stream lifecycle events from its DIT-backed path.
-- `IProvider` and `IStorage` are exported contracts. They are not first-party concrete packages in this repo.
+- `IProvider` remains a contract-only surface. `IStorage` is still a core contract, but the repo now ships a first-party browser adapter in `@kaira/chat-storage-indexeddb`.
 - The docs app is authored MDX plus generated search data. It is not generated from package exports or tests.
 - Package READMEs and docs examples can drift from runtime behavior.
 

@@ -114,8 +114,8 @@
       "status": "interface-only",
       "backing": "contract-only",
       "evidence": ["packages/chat-core/src/types/storage.ts", "packages/chat-core/src/index.ts"],
-      "notes": "The public contract is exported, but there is no first-party storage adapter package in the repo.",
-      "roadmapCandidate": true
+      "notes": "The public contract remains exported from core, and the repo now ships a first-party browser implementation in `@kaira/chat-storage-indexeddb`.",
+      "roadmapCandidate": false
     },
     {
       "id": "storage-integration",
@@ -179,6 +179,23 @@
       ],
       "notes": "Engine-level plugin registration and teardown exist, but there are no first-party plugin packages.",
       "roadmapCandidate": true
+    },
+    {
+      "id": "indexeddb-storage-adapter",
+      "category": "Concrete Adapters",
+      "feature": "IndexedDB storage adapter",
+      "surfaceType": "public-sdk",
+      "ownerArea": "@kaira/chat-storage-indexeddb",
+      "publicSurface": true,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-storage-indexeddb/src/IndexedDBStorage.ts",
+        "packages/chat-storage-indexeddb/src/index.ts",
+        "packages/chat-storage-indexeddb/src/IndexedDBStorage.test.ts"
+      ],
+      "notes": "The repo now includes a browser-first IndexedDB `IStorage` adapter with lazy database open, serializer-backed records, message and conversation pagination, and in-memory fallback when IndexedDB is unavailable.",
+      "roadmapCandidate": false
     },
     {
       "id": "polling-transport",
@@ -343,7 +360,7 @@
       "status": "implemented",
       "backing": "concrete",
       "evidence": ["apps/web/lib/chat/engine.ts", "apps/web/components/chat/Chat.tsx"],
-      "notes": "The browser singleton ChatEngine polls the Next.js server routes instead of talking to DIT directly.",
+      "notes": "The browser singleton ChatEngine persists locally with the IndexedDB storage adapter and polls the Next.js server routes instead of talking to DIT directly.",
       "roadmapCandidate": false
     },
     {
@@ -543,16 +560,16 @@
       "category": "Testing",
       "feature": "First-party adapter automated tests",
       "surfaceType": "public-sdk",
-      "ownerArea": "transport and DIT adapters",
+      "ownerArea": "storage and transport adapters",
       "publicSurface": true,
       "status": "implemented",
       "backing": "concrete",
       "evidence": [
+        "packages/chat-storage-indexeddb/src/IndexedDBStorage.test.ts",
         "packages/chat-transport-polling/src/polling-transport.test.ts",
-        "packages/chat-provider-dit/src/dit-transport.test.ts",
-        "packages/chat-provider-dit/vitest.config.ts"
+        "packages/chat-provider-dit/src/dit-transport.test.ts"
       ],
-      "notes": "Polling and DIT adapter behavior are covered by focused Vitest suites.",
+      "notes": "IndexedDB storage, polling transport, and DIT transport adapter behavior are covered by focused Vitest suites.",
       "roadmapCandidate": false
     },
     {

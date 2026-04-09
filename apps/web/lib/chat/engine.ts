@@ -8,6 +8,7 @@ import type {
 } from '@kaira/chat-core';
 
 import { ChatEngine, ChatSerializer } from '@kaira/chat-core';
+import { IndexedDBStorage } from '@kaira/chat-storage-indexeddb';
 import { PollingTransport } from '@kaira/chat-transport-polling';
 
 import { demoConfig } from '@/config/demo';
@@ -218,6 +219,9 @@ export function getChatEngine(): ChatEngine {
 
   pollCursor = undefined;
   const { chatroomId: conversationId, senderId } = demoConfig;
+  const storage = new IndexedDBStorage({
+    databaseName: `kaira-chat-demo:${conversationId}`,
+  });
 
   const transport = new PollingTransport<
     TransportEvent<'message' | 'typing'>,
@@ -232,6 +236,7 @@ export function getChatEngine(): ChatEngine {
   });
 
   engineInstance = new ChatEngine({
+    storage,
     transport,
     sender: {
       id: senderId,

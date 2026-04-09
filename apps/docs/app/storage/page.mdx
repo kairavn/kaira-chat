@@ -22,109 +22,54 @@ export interface IStorage {
 }
 ```
 
-## LocalStorage Adapter (Browser)
+## First-Party Browser Adapter
+
+The repo now ships `@kaira/chat-storage-indexeddb`, a browser-first `IStorage` adapter that:
+
+- opens IndexedDB lazily on first use
+- persists conversations and messages through `ChatSerializer`
+- falls back to in-memory storage when IndexedDB is unavailable or the database cannot be opened
+- keeps browser-only persistence logic outside `@kaira/chat-core`
 
 ```ts
-import type {
-  Conversation,
-  ConversationQuery,
-  CursorPage,
-  IStorage,
-  Message,
-  MessageQuery,
-} from '@kaira/chat-core';
+import { ChatEngine } from '@kaira/chat-core';
+import { IndexedDBStorage } from '@kaira/chat-storage-indexeddb';
 
-const MESSAGE_KEY = 'kaira:messages';
-const CONVERSATION_KEY = 'kaira:conversations';
+const storage = new IndexedDBStorage({
+  databaseName: 'my-chat-app',
+  onError: (error) => {
+    console.warn('Storage degraded to memory:', error.message);
+  },
+});
 
-export class LocalStorageAdapter implements IStorage {
-  async saveMessage(message: Message): Promise<void> {
-    const messages = this.readMessages();
-    messages[message.id] = message;
-    this.write(MESSAGE_KEY, messages);
-  }
+const engine = new ChatEngine({ storage });
+```
 
-  async getMessage(id: string): Promise<Message | undefined> {
-    return this.readMessages()[id];
-  }
+## Adapter Options
 
-  async getMessages(query: MessageQuery): Promise<CursorPage<Message>> {
-    const items = Object.values(this.readMessages()).filter(
-      (message) => message.conversationId === query.conversationId,
-    );
-    return { items, hasMore: false };
-  }
-
-  async updateMessage(id: string, update: Partial<Message>): Promise<void> {
-    const messages = this.readMessages();
-    const current = messages[id];
-    if (!current) return;
-    messages[id] = { ...current, ...update };
-    this.write(MESSAGE_KEY, messages);
-  }
-
-  async deleteMessage(id: string): Promise<void> {
-    const messages = this.readMessages();
-    delete messages[id];
-    this.write(MESSAGE_KEY, messages);
-  }
-
-  async saveConversation(conversation: Conversation): Promise<void> {
-    const conversations = this.readConversations();
-    conversations[conversation.id] = conversation;
-    this.write(CONVERSATION_KEY, conversations);
-  }
-
-  async getConversation(id: string): Promise<Conversation | undefined> {
-    return this.readConversations()[id];
-  }
-
-  async getConversations(_query?: ConversationQuery): Promise<CursorPage<Conversation>> {
-    return { items: Object.values(this.readConversations()), hasMore: false };
-  }
-
-  async updateConversation(id: string, update: Partial<Conversation>): Promise<void> {
-    const conversations = this.readConversations();
-    const current = conversations[id];
-    if (!current) return;
-    conversations[id] = { ...current, ...update };
-    this.write(CONVERSATION_KEY, conversations);
-  }
-
-  async deleteConversation(id: string): Promise<void> {
-    const conversations = this.readConversations();
-    delete conversations[id];
-    this.write(CONVERSATION_KEY, conversations);
-  }
-
-  async clear(): Promise<void> {
-    localStorage.removeItem(MESSAGE_KEY);
-    localStorage.removeItem(CONVERSATION_KEY);
-  }
-
-  private readMessages(): Record<string, Message> {
-    return this.read<Record<string, Message>>(MESSAGE_KEY);
-  }
-
-  private readConversations(): Record<string, Conversation> {
-    return this.read<Record<string, Conversation>>(CONVERSATION_KEY);
-  }
-
-  private read<T>(key: string): T {
-    const raw = localStorage.getItem(key);
-    if (!raw) return {} as T;
-    return JSON.parse(raw) as T;
-  }
-
-  private write<T>(key: string, value: T): void {
-    localStorage.setItem(key, JSON.stringify(value));
-  }
+```ts
+export interface IndexedDBStorageOptions {
+  readonly databaseName?: string;
+  readonly databaseVersion?: number;
+  readonly fallbackStorage?: IStorage;
+  readonly serializer?: Pick<
+    ChatSerializer,
+    'serializeMessage' | 'deserializeMessage' | 'serializeConversation' | 'deserializeConversation'
+  >;
+  readonly onError?: (error: Error) => void;
 }
 ```
 
-## Database Adapter Pattern
+## Query Semantics
+
+- `MessageQuery.cursor` is an exclusive message-id anchor.
+- `MessageQuery.before` and `MessageQuery.after` are exclusive timestamp bounds.
+- `ConversationQuery` defaults to `updatedAt` descending order.
+- `ConversationQuery.cursor` is an exclusive conversation-id anchor within that ordered result set.
+
+## Custom Adapter Pattern
 
 ```ts
-// Implement IStorage by translating methods to your backend API or ORM.
-// Keep conversion logic isolated in this adapter layer.
+// Implement IStorage by translating each method to your own database, API, or cache layer.
+// Keep serialization and query semantics isolated inside the adapter package.
 ```
