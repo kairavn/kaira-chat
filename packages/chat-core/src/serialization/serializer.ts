@@ -17,7 +17,10 @@ import { createChatError } from '../types/error.js';
 const MESSAGE_TYPES = [
   'text',
   'image',
+  'audio',
+  'video',
   'file',
+  'location',
   'system',
   'ai',
   'tool_call',
@@ -90,6 +93,28 @@ function parseOptionalNumber(value: unknown, field: string): number | undefined 
 
   assertNumber(value, field);
   return value;
+}
+
+function parseRequiredFiniteNumber(value: unknown, field: string): number {
+  assertNumber(value, field);
+  if (!Number.isFinite(value)) {
+    throw createChatError('validation', `${field}: expected finite number`);
+  }
+
+  return value;
+}
+
+function parseOptionalNonNegativeNumber(value: unknown, field: string): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const parsedValue = parseRequiredFiniteNumber(value, field);
+  if (parsedValue < 0) {
+    throw createChatError('validation', `${field}: expected non-negative number`);
+  }
+
+  return parsedValue;
 }
 
 function parseOptionalBoolean(value: unknown, field: string): boolean | undefined {
@@ -179,6 +204,24 @@ function parseImageDimensionsValue(value: unknown, field: string): ImageDimensio
 function parseRequiredNumber(value: unknown, field: string): number {
   assertNumber(value, field);
   return value;
+}
+
+function parseLatitude(value: unknown, field: string): number {
+  const latitude = parseRequiredFiniteNumber(value, field);
+  if (latitude < -90 || latitude > 90) {
+    throw createChatError('validation', `${field}: expected latitude between -90 and 90`);
+  }
+
+  return latitude;
+}
+
+function parseLongitude(value: unknown, field: string): number {
+  const longitude = parseRequiredFiniteNumber(value, field);
+  if (longitude < -180 || longitude > 180) {
+    throw createChatError('validation', `${field}: expected longitude between -180 and 180`);
+  }
+
+  return longitude;
 }
 
 function parseToolCall(value: unknown, field: string): ToolCall {
@@ -290,6 +333,60 @@ function parseMessageValue(value: unknown): Message {
           ? { dimensions: parseImageDimensionsValue(value['dimensions'], 'Message.dimensions') }
           : {}),
       };
+    case 'audio':
+      return {
+        ...shared,
+        type,
+        url: parseRequiredString(value['url'], 'Message.url'),
+        ...(parseOptionalString(value['mimeType'], 'Message.mimeType') !== undefined
+          ? { mimeType: parseOptionalString(value['mimeType'], 'Message.mimeType') }
+          : {}),
+        ...(parseOptionalString(value['title'], 'Message.title') !== undefined
+          ? { title: parseOptionalString(value['title'], 'Message.title') }
+          : {}),
+        ...(parseOptionalNonNegativeNumber(value['durationSeconds'], 'Message.durationSeconds') !==
+        undefined
+          ? {
+              durationSeconds: parseOptionalNonNegativeNumber(
+                value['durationSeconds'],
+                'Message.durationSeconds',
+              ),
+            }
+          : {}),
+        ...(parseOptionalNonNegativeNumber(value['size'], 'Message.size') !== undefined
+          ? { size: parseOptionalNonNegativeNumber(value['size'], 'Message.size') }
+          : {}),
+      };
+    case 'video':
+      return {
+        ...shared,
+        type,
+        url: parseRequiredString(value['url'], 'Message.url'),
+        ...(parseOptionalString(value['mimeType'], 'Message.mimeType') !== undefined
+          ? { mimeType: parseOptionalString(value['mimeType'], 'Message.mimeType') }
+          : {}),
+        ...(parseOptionalString(value['title'], 'Message.title') !== undefined
+          ? { title: parseOptionalString(value['title'], 'Message.title') }
+          : {}),
+        ...(parseOptionalString(value['posterUrl'], 'Message.posterUrl') !== undefined
+          ? { posterUrl: parseOptionalString(value['posterUrl'], 'Message.posterUrl') }
+          : {}),
+        ...(parseImageDimensionsValue(value['dimensions'], 'Message.dimensions') !== undefined
+          ? { dimensions: parseImageDimensionsValue(value['dimensions'], 'Message.dimensions') }
+          : {}),
+        ...(parseOptionalNonNegativeNumber(value['durationSeconds'], 'Message.durationSeconds') !==
+        undefined
+          ? {
+              durationSeconds: parseOptionalNonNegativeNumber(
+                value['durationSeconds'],
+                'Message.durationSeconds',
+              ),
+            }
+          : {}),
+        ...(parseOptionalNonNegativeNumber(value['size'], 'Message.size') !== undefined
+          ? { size: parseOptionalNonNegativeNumber(value['size'], 'Message.size') }
+          : {}),
+      };
     case 'file':
       return {
         ...shared,
@@ -298,6 +395,22 @@ function parseMessageValue(value: unknown): Message {
         name: parseRequiredString(value['name'], 'Message.name'),
         mimeType: parseRequiredString(value['mimeType'], 'Message.mimeType'),
         size: parseRequiredNumber(value['size'], 'Message.size'),
+      };
+    case 'location':
+      return {
+        ...shared,
+        type,
+        latitude: parseLatitude(value['latitude'], 'Message.latitude'),
+        longitude: parseLongitude(value['longitude'], 'Message.longitude'),
+        ...(parseOptionalString(value['label'], 'Message.label') !== undefined
+          ? { label: parseOptionalString(value['label'], 'Message.label') }
+          : {}),
+        ...(parseOptionalString(value['address'], 'Message.address') !== undefined
+          ? { address: parseOptionalString(value['address'], 'Message.address') }
+          : {}),
+        ...(parseOptionalString(value['url'], 'Message.url') !== undefined
+          ? { url: parseOptionalString(value['url'], 'Message.url') }
+          : {}),
       };
     case 'system':
       return {

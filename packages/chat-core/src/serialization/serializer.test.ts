@@ -30,11 +30,40 @@ const validMessages: ReadonlyArray<Message> = [
   },
   {
     ...baseMessage,
+    type: 'audio',
+    url: 'https://example.com/audio.mp3',
+    mimeType: 'audio/mpeg',
+    title: 'Voice note',
+    durationSeconds: 45,
+    size: 4096,
+  },
+  {
+    ...baseMessage,
+    type: 'video',
+    url: 'https://example.com/video.mp4',
+    mimeType: 'video/mp4',
+    title: 'Walkthrough',
+    posterUrl: 'https://example.com/video-poster.jpg',
+    dimensions: { width: 1280, height: 720 },
+    durationSeconds: 93,
+    size: 8192,
+  },
+  {
+    ...baseMessage,
     type: 'file',
     url: 'https://example.com/file.pdf',
     name: 'file.pdf',
     mimeType: 'application/pdf',
     size: 1024,
+  },
+  {
+    ...baseMessage,
+    type: 'location',
+    latitude: 10.77689,
+    longitude: 106.70081,
+    label: 'Ho Chi Minh City',
+    address: 'District 1, Ho Chi Minh City, Vietnam',
+    url: 'https://maps.example.com/location',
   },
   {
     ...baseMessage,
@@ -137,11 +166,33 @@ describe('ChatSerializer', () => {
       expect(() =>
         serializer.deserializeMessage(
           JSON.stringify({
-            ...validMessages[4],
+            ...validMessages[7],
             streamState: 'broken',
           }),
         ),
       ).toThrow(/Unknown Message.streamState/);
+    });
+
+    it('throws on invalid location coordinates', () => {
+      expect(() =>
+        serializer.deserializeMessage(
+          JSON.stringify({
+            ...validMessages[5],
+            latitude: 120,
+          }),
+        ),
+      ).toThrow(/Message.latitude/);
+    });
+
+    it('throws on invalid media numeric metadata', () => {
+      expect(() =>
+        serializer.deserializeMessage(
+          JSON.stringify({
+            ...validMessages[2],
+            durationSeconds: -3,
+          }),
+        ),
+      ).toThrow(/Message.durationSeconds/);
     });
   });
 

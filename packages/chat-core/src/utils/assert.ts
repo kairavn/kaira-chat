@@ -1,13 +1,16 @@
 import type {
   AIMessage,
+  AudioMessage,
   CustomMessage,
   FileMessage,
   ImageMessage,
+  LocationMessage,
   Message,
   SystemMessage,
   TextMessage,
   ToolCallMessage,
   ToolResultMessage,
+  VideoMessage,
 } from '../types/message.js';
 
 /** Narrows a Message to TextMessage. */
@@ -20,9 +23,24 @@ export function isImageMessage(msg: Message): msg is ImageMessage {
   return msg.type === 'image';
 }
 
+/** Narrows a Message to AudioMessage. */
+export function isAudioMessage(msg: Message): msg is AudioMessage {
+  return msg.type === 'audio';
+}
+
+/** Narrows a Message to VideoMessage. */
+export function isVideoMessage(msg: Message): msg is VideoMessage {
+  return msg.type === 'video';
+}
+
 /** Narrows a Message to FileMessage. */
 export function isFileMessage(msg: Message): msg is FileMessage {
   return msg.type === 'file';
+}
+
+/** Narrows a Message to LocationMessage. */
+export function isLocationMessage(msg: Message): msg is LocationMessage {
+  return msg.type === 'location';
 }
 
 /** Narrows a Message to SystemMessage. */

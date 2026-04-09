@@ -2,6 +2,22 @@
 
 `@kaira/chat-ui` contains composable primitives, not a monolithic chat shell.
 
+## Built-in Content Renderers
+
+`createDefaultRendererRegistry()` ships production-usable defaults for:
+
+- `text`
+- `ai` with text-stream rendering when `streamState === 'streaming'`
+- `image`
+- `audio`
+- `video`
+- `file`
+- `location`
+- `system`
+
+`text-stream` is not a separate persisted message type. It is represented by the default `ai`
+renderer plus the existing stream preview flow from `useStreamingMessage()`.
+
 ## MessageRenderer
 
 Renders a single message using a `RendererRegistry`.
@@ -14,6 +30,19 @@ export interface DynamicMessageRendererProps extends MessageRendererProps {
 ```
 
 Use when you need polymorphic rendering by `message.type`.
+
+## Reusable Content Components
+
+The package also exports typed content primitives for direct use:
+
+- `TextMessageContent`
+- `TextStreamMessageContent`
+- `ImageMessageContent`
+- `FileMessageContent`
+- `AudioMessageContent`
+- `VideoMessageContent`
+- `LocationMessageContent`
+- `UnsupportedMessageContent`
 
 ## MessageInput
 
@@ -52,4 +81,28 @@ Participant-aware typing indicator for ephemeral remote typing state.
 <ThinkingIndicator />
 <TypingIndicator participants={typingParticipants} />
 <MessageInput onValueChange={handleDraftChange} onBlur={handleBlur} onSend={handleSend} />
+```
+
+## Overriding a Default Renderer
+
+```tsx
+import type { MessageRendererProps } from '@kaira/chat-ui';
+import type { JSX } from 'react';
+
+import { createDefaultRendererRegistry, LocationMessageContent } from '@kaira/chat-ui';
+
+const registry = createDefaultRendererRegistry();
+
+function CustomLocationRenderer(props: MessageRendererProps): JSX.Element {
+  if (props.message.type !== 'location') {
+    throw new Error('CustomLocationRenderer received a non-location message');
+  }
+
+  return <LocationMessageContent message={props.message} />;
+}
+
+registry.register({
+  type: 'location',
+  component: CustomLocationRenderer,
+});
 ```

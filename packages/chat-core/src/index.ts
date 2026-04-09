@@ -9,9 +9,11 @@ export type {
   AIMessage,
   AIMetadata,
   AIStreamState,
+  AudioMessage,
   CustomMessage,
   FileMessage,
   ImageMessage,
+  LocationMessage,
   Message,
   MessageContent,
   MessageMetadata,
@@ -23,6 +25,7 @@ export type {
   ToolCall,
   ToolCallMessage,
   ToolResultMessage,
+  VideoMessage,
 } from './types/message.js';
 
 // Types — conversation
@@ -106,13 +109,16 @@ export { ConversationStateMachine } from './state/conversation-state.js';
 // Utils
 export {
   isAIMessage,
+  isAudioMessage,
   isCustomMessage,
   isFileMessage,
   isImageMessage,
+  isLocationMessage,
   isSystemMessage,
   isTextMessage,
   isToolCallMessage,
   isToolResultMessage,
+  isVideoMessage,
 } from './utils/assert.js';
 export { generateId } from './utils/id.js';
 export {

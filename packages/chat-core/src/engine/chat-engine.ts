@@ -85,6 +85,59 @@ function getClientNonceFromMetadata(metadata: MessageMetadata | undefined): stri
   return typeof metadata?.clientNonce === 'string' ? metadata.clientNonce : undefined;
 }
 
+function assertFiniteNumber(value: number, field: string): void {
+  if (!Number.isFinite(value)) {
+    throw createChatError('validation', `${field}: expected finite number`);
+  }
+}
+
+function assertOptionalNonNegativeNumber(value: number | undefined, field: string): void {
+  if (value === undefined) {
+    return;
+  }
+
+  assertFiniteNumber(value, field);
+  if (value < 0) {
+    throw createChatError('validation', `${field}: expected non-negative number`);
+  }
+}
+
+function assertLatitude(value: number): void {
+  assertFiniteNumber(value, 'Message.latitude');
+  if (value < -90 || value > 90) {
+    throw createChatError('validation', 'Message.latitude: expected latitude between -90 and 90');
+  }
+}
+
+function assertLongitude(value: number): void {
+  assertFiniteNumber(value, 'Message.longitude');
+  if (value < -180 || value > 180) {
+    throw createChatError(
+      'validation',
+      'Message.longitude: expected longitude between -180 and 180',
+    );
+  }
+}
+
+function validateBuiltInMessagePayload(message: Message): void {
+  switch (message.type) {
+    case 'audio':
+      assertOptionalNonNegativeNumber(message.durationSeconds, 'Message.durationSeconds');
+      assertOptionalNonNegativeNumber(message.size, 'Message.size');
+      return;
+    case 'video':
+      assertOptionalNonNegativeNumber(message.durationSeconds, 'Message.durationSeconds');
+      assertOptionalNonNegativeNumber(message.size, 'Message.size');
+      return;
+    case 'location':
+      assertLatitude(message.latitude);
+      assertLongitude(message.longitude);
+      return;
+    default:
+      return;
+  }
+}
+
 function hasMatchingClientNonce(
   messages: Iterable<Message>,
   conversationId: string,
@@ -192,6 +245,30 @@ function createOutgoingMessage(
         ...(content.dimensions ? { dimensions: content.dimensions } : {}),
         ...(metadata ? { metadata } : {}),
       };
+    case 'audio':
+      return {
+        ...baseFields,
+        type: 'audio',
+        url: content.url,
+        ...('mimeType' in content ? { mimeType: content.mimeType } : {}),
+        ...('title' in content ? { title: content.title } : {}),
+        ...('durationSeconds' in content ? { durationSeconds: content.durationSeconds } : {}),
+        ...('size' in content ? { size: content.size } : {}),
+        ...(metadata ? { metadata } : {}),
+      };
+    case 'video':
+      return {
+        ...baseFields,
+        type: 'video',
+        url: content.url,
+        ...('mimeType' in content ? { mimeType: content.mimeType } : {}),
+        ...('title' in content ? { title: content.title } : {}),
+        ...('posterUrl' in content ? { posterUrl: content.posterUrl } : {}),
+        ...('dimensions' in content ? { dimensions: content.dimensions } : {}),
+        ...('durationSeconds' in content ? { durationSeconds: content.durationSeconds } : {}),
+        ...('size' in content ? { size: content.size } : {}),
+        ...(metadata ? { metadata } : {}),
+      };
     case 'file':
       return {
         ...baseFields,
@@ -200,6 +277,17 @@ function createOutgoingMessage(
         name: content.name,
         mimeType: content.mimeType,
         size: content.size,
+        ...(metadata ? { metadata } : {}),
+      };
+    case 'location':
+      return {
+        ...baseFields,
+        type: 'location',
+        latitude: content.latitude,
+        longitude: content.longitude,
+        ...('label' in content ? { label: content.label } : {}),
+        ...('address' in content ? { address: content.address } : {}),
+        ...('url' in content ? { url: content.url } : {}),
         ...(metadata ? { metadata } : {}),
       };
     case 'system':
@@ -289,6 +377,28 @@ function applyMessageContentUpdate(existing: Message, update: Partial<MessageCon
         ...('alt' in update ? { alt: update.alt } : {}),
         ...('dimensions' in update ? { dimensions: update.dimensions } : {}),
       };
+    case 'audio':
+      return {
+        ...existing,
+        ...metadataPatch,
+        ...('url' in update && typeof update.url === 'string' ? { url: update.url } : {}),
+        ...('mimeType' in update ? { mimeType: update.mimeType } : {}),
+        ...('title' in update ? { title: update.title } : {}),
+        ...('durationSeconds' in update ? { durationSeconds: update.durationSeconds } : {}),
+        ...('size' in update ? { size: update.size } : {}),
+      };
+    case 'video':
+      return {
+        ...existing,
+        ...metadataPatch,
+        ...('url' in update && typeof update.url === 'string' ? { url: update.url } : {}),
+        ...('mimeType' in update ? { mimeType: update.mimeType } : {}),
+        ...('title' in update ? { title: update.title } : {}),
+        ...('posterUrl' in update ? { posterUrl: update.posterUrl } : {}),
+        ...('dimensions' in update ? { dimensions: update.dimensions } : {}),
+        ...('durationSeconds' in update ? { durationSeconds: update.durationSeconds } : {}),
+        ...('size' in update ? { size: update.size } : {}),
+      };
     case 'file':
       return {
         ...existing,
@@ -299,6 +409,20 @@ function applyMessageContentUpdate(existing: Message, update: Partial<MessageCon
           ? { mimeType: update.mimeType }
           : {}),
         ...('size' in update && typeof update.size === 'number' ? { size: update.size } : {}),
+      };
+    case 'location':
+      return {
+        ...existing,
+        ...metadataPatch,
+        ...('latitude' in update && typeof update.latitude === 'number'
+          ? { latitude: update.latitude }
+          : {}),
+        ...('longitude' in update && typeof update.longitude === 'number'
+          ? { longitude: update.longitude }
+          : {}),
+        ...('label' in update ? { label: update.label } : {}),
+        ...('address' in update ? { address: update.address } : {}),
+        ...('url' in update ? { url: update.url } : {}),
       };
     case 'system':
       return {
@@ -551,6 +675,7 @@ export class ChatEngine implements IChatEngine {
       now,
       'pending',
     );
+    validateBuiltInMessagePayload(message);
 
     const processed = await this.pipeline.run(
       {
@@ -562,6 +687,7 @@ export class ChatEngine implements IChatEngine {
     );
 
     const finalMessage = requireSentMessageEvent(processed).message;
+    validateBuiltInMessagePayload(finalMessage);
     this.addToMessageIndex(finalMessage.id);
 
     if (this.storage) {
@@ -664,6 +790,7 @@ export class ChatEngine implements IChatEngine {
     }
 
     const updated = applyMessageContentUpdate(existing, update);
+    validateBuiltInMessagePayload(updated);
 
     if (this.storage) {
       await this.storage.updateMessage(id, updated);
@@ -1041,7 +1168,10 @@ export class ChatEngine implements IChatEngine {
   private registerDefaultMessageTypes(): void {
     this.messageRegistry.register({ type: 'text' });
     this.messageRegistry.register({ type: 'image' });
+    this.messageRegistry.register({ type: 'audio' });
+    this.messageRegistry.register({ type: 'video' });
     this.messageRegistry.register({ type: 'file' });
+    this.messageRegistry.register({ type: 'location' });
     this.messageRegistry.register({ type: 'system' });
     this.messageRegistry.register({ type: 'ai' });
     this.messageRegistry.register({ type: 'tool_call' });

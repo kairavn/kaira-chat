@@ -5,7 +5,10 @@ import type { Participant } from './participant.js';
 export type MessageType =
   | 'text'
   | 'image'
+  | 'audio'
+  | 'video'
   | 'file'
+  | 'location'
   | 'system'
   | 'ai'
   | 'tool_call'
@@ -64,6 +67,17 @@ interface BaseMessage {
   readonly metadata?: MessageMetadata;
 }
 
+interface BaseAttachmentMessage extends BaseMessage {
+  readonly url: string;
+}
+
+interface BaseTimedMediaMessage extends BaseAttachmentMessage {
+  readonly mimeType?: string;
+  readonly title?: string;
+  readonly durationSeconds?: number;
+  readonly size?: number;
+}
+
 // ---------------------------------------------------------------------------
 // Message variants (discriminated on `type`)
 // ---------------------------------------------------------------------------
@@ -80,12 +94,31 @@ export interface ImageMessage extends BaseMessage {
   readonly dimensions?: ImageDimensions;
 }
 
+export interface AudioMessage extends BaseTimedMediaMessage {
+  readonly type: 'audio';
+}
+
+export interface VideoMessage extends BaseTimedMediaMessage {
+  readonly type: 'video';
+  readonly posterUrl?: string;
+  readonly dimensions?: ImageDimensions;
+}
+
 export interface FileMessage extends BaseMessage {
   readonly type: 'file';
   readonly url: string;
   readonly name: string;
   readonly mimeType: string;
   readonly size: number;
+}
+
+export interface LocationMessage extends BaseMessage {
+  readonly type: 'location';
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly label?: string;
+  readonly address?: string;
+  readonly url?: string;
 }
 
 export interface SystemMessage extends BaseMessage {
@@ -123,7 +156,10 @@ export interface CustomMessage extends BaseMessage {
 export type Message =
   | TextMessage
   | ImageMessage
+  | AudioMessage
+  | VideoMessage
   | FileMessage
+  | LocationMessage
   | SystemMessage
   | AIMessage
   | ToolCallMessage
@@ -148,11 +184,37 @@ export type MessageContent =
       readonly dimensions?: ImageDimensions;
     } & BaseMessageContent)
   | ({
+      readonly type: 'audio';
+      readonly url: string;
+      readonly mimeType?: string;
+      readonly title?: string;
+      readonly durationSeconds?: number;
+      readonly size?: number;
+    } & BaseMessageContent)
+  | ({
+      readonly type: 'video';
+      readonly url: string;
+      readonly mimeType?: string;
+      readonly title?: string;
+      readonly posterUrl?: string;
+      readonly dimensions?: ImageDimensions;
+      readonly durationSeconds?: number;
+      readonly size?: number;
+    } & BaseMessageContent)
+  | ({
       readonly type: 'file';
       readonly url: string;
       readonly name: string;
       readonly mimeType: string;
       readonly size: number;
+    } & BaseMessageContent)
+  | ({
+      readonly type: 'location';
+      readonly latitude: number;
+      readonly longitude: number;
+      readonly label?: string;
+      readonly address?: string;
+      readonly url?: string;
     } & BaseMessageContent)
   | ({
       readonly type: 'system';

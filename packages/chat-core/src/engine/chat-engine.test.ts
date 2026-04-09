@@ -6,6 +6,7 @@ import type { ITransport, TransportEvent } from '../types/transport.js';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { MessageRegistry } from '../message-registry/message-registry.js';
 import { ChatEngine } from './chat-engine.js';
 
 // ---------------------------------------------------------------------------
@@ -113,6 +114,15 @@ async function flushAsyncHandlers(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+function getPrivateMessageRegistry(engine: object): MessageRegistry {
+  const registry = Reflect.get(engine, 'messageRegistry');
+  if (!(registry instanceof MessageRegistry)) {
+    throw new Error('ChatEngine private message registry is unavailable');
+  }
+
+  return registry;
+}
+
 // ---------------------------------------------------------------------------
 // Standalone mode tests
 // ---------------------------------------------------------------------------
@@ -197,6 +207,131 @@ describe('ChatEngine — standalone mode', () => {
     const msg = await engine.sendMessage(conv.id, { type: 'text', content: 'draft' });
     const updated = await engine.updateMessage(msg.id, { type: 'text', content: 'final' });
     expect((updated as { content: string }).content).toBe('final');
+  });
+
+  it('creates built-in audio, video, and location messages', async () => {
+    const conv = await engine.createConversation({ type: 'direct', participants: [] });
+
+    const audioMessage = await engine.sendMessage(conv.id, {
+      type: 'audio',
+      url: 'https://example.com/audio.mp3',
+      mimeType: 'audio/mpeg',
+      title: 'Launch note',
+      durationSeconds: 32,
+      size: 2048,
+    });
+    const videoMessage = await engine.sendMessage(conv.id, {
+      type: 'video',
+      url: 'https://example.com/video.mp4',
+      mimeType: 'video/mp4',
+      title: 'Product walkthrough',
+      posterUrl: 'https://example.com/poster.jpg',
+      dimensions: { width: 1280, height: 720 },
+      durationSeconds: 95,
+      size: 8192,
+    });
+    const locationMessage = await engine.sendMessage(conv.id, {
+      type: 'location',
+      latitude: 10.77689,
+      longitude: 106.70081,
+      label: 'Ho Chi Minh City',
+      address: 'District 1',
+    });
+
+    expect(audioMessage).toMatchObject({
+      type: 'audio',
+      title: 'Launch note',
+      durationSeconds: 32,
+    });
+    expect(videoMessage).toMatchObject({
+      type: 'video',
+      title: 'Product walkthrough',
+      posterUrl: 'https://example.com/poster.jpg',
+    });
+    expect(locationMessage).toMatchObject({
+      type: 'location',
+      latitude: 10.77689,
+      longitude: 106.70081,
+    });
+  });
+
+  it('updates built-in media and location messages without changing type', async () => {
+    const conv = await engine.createConversation({ type: 'direct', participants: [] });
+
+    const videoMessage = await engine.sendMessage(conv.id, {
+      type: 'video',
+      url: 'https://example.com/video.mp4',
+      title: 'Draft walkthrough',
+    });
+    const locationMessage = await engine.sendMessage(conv.id, {
+      type: 'location',
+      latitude: 10.77689,
+      longitude: 106.70081,
+    });
+
+    const updatedVideo = await engine.updateMessage(videoMessage.id, {
+      type: 'video',
+      title: 'Final walkthrough',
+      durationSeconds: 120,
+    });
+    const updatedLocation = await engine.updateMessage(locationMessage.id, {
+      type: 'location',
+      label: 'Updated pin',
+      url: 'https://maps.example.com/pin',
+    });
+
+    expect(updatedVideo).toMatchObject({
+      type: 'video',
+      title: 'Final walkthrough',
+      durationSeconds: 120,
+    });
+    expect(updatedLocation).toMatchObject({
+      type: 'location',
+      label: 'Updated pin',
+      url: 'https://maps.example.com/pin',
+    });
+  });
+
+  it('registers built-in audio, video, and location message types by default', () => {
+    const registry = getPrivateMessageRegistry(engine);
+
+    expect(registry.has('audio')).toBe(true);
+    expect(registry.has('video')).toBe(true);
+    expect(registry.has('location')).toBe(true);
+  });
+
+  it('rejects invalid built-in payloads at send time', async () => {
+    const conv = await engine.createConversation({ type: 'direct', participants: [] });
+
+    await expect(
+      engine.sendMessage(conv.id, {
+        type: 'location',
+        latitude: 120,
+        longitude: 106.70081,
+      }),
+    ).rejects.toMatchObject({
+      kind: 'validation',
+      message: expect.stringContaining('Message.latitude'),
+    });
+  });
+
+  it('rejects invalid built-in payloads during update', async () => {
+    const conv = await engine.createConversation({ type: 'direct', participants: [] });
+    const message = await engine.sendMessage(conv.id, {
+      type: 'audio',
+      url: 'https://example.com/audio.mp3',
+      durationSeconds: 10,
+    });
+
+    await expect(
+      engine.updateMessage(message.id, {
+        type: 'audio',
+        durationSeconds: -1,
+      }),
+    ).rejects.toMatchObject({
+      kind: 'validation',
+      message: expect.stringContaining('Message.durationSeconds'),
+    });
   });
 
   it('deletes a message', async () => {

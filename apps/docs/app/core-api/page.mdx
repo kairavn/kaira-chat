@@ -42,6 +42,23 @@ updateMessage(id: string, update: Partial<MessageContent>): Promise<Message>;
 deleteMessage(id: string): Promise<void>;
 ```
 
+Built-in `MessageContent` variants include:
+
+- `text`
+- `image`
+- `audio`
+- `video`
+- `file`
+- `location`
+- `system`
+- `ai`
+- `tool_call`
+- `tool_result`
+- `custom`
+
+`audio`, `video`, and `location` are first-class core message types.
+`text-stream` remains a rendering concern built on the existing `ai` stream lifecycle.
+
 ## Events
 
 ```ts

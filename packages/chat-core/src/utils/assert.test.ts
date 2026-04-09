@@ -4,13 +4,16 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isAIMessage,
+  isAudioMessage,
   isCustomMessage,
   isFileMessage,
   isImageMessage,
+  isLocationMessage,
   isSystemMessage,
   isTextMessage,
   isToolCallMessage,
   isToolResultMessage,
+  isVideoMessage,
 } from './assert.js';
 
 const base = {
@@ -24,6 +27,8 @@ const base = {
 const messages: Message[] = [
   { ...base, type: 'text', content: 'hello' },
   { ...base, type: 'image', url: 'https://img.png' },
+  { ...base, type: 'audio', url: 'https://audio.mp3', durationSeconds: 30 },
+  { ...base, type: 'video', url: 'https://video.mp4', durationSeconds: 60 },
   {
     ...base,
     type: 'file',
@@ -32,6 +37,7 @@ const messages: Message[] = [
     mimeType: 'application/pdf',
     size: 1024,
   },
+  { ...base, type: 'location', latitude: 10.77, longitude: 106.7 },
   { ...base, type: 'system', eventKind: 'participant_joined', content: 'User joined' },
   { ...base, type: 'ai', content: 'Hello!', streamState: 'complete' },
   { ...base, type: 'tool_call', toolCalls: [{ id: 'tc1', name: 'search', arguments: {} }] },
@@ -51,32 +57,47 @@ describe('type guards', () => {
   });
 
   it('isFileMessage narrows correctly', () => {
-    expect(isFileMessage(messages[2]!)).toBe(true);
+    expect(isFileMessage(messages[4]!)).toBe(true);
     expect(isFileMessage(messages[0]!)).toBe(false);
   });
 
+  it('isAudioMessage narrows correctly', () => {
+    expect(isAudioMessage(messages[2]!)).toBe(true);
+    expect(isAudioMessage(messages[0]!)).toBe(false);
+  });
+
+  it('isVideoMessage narrows correctly', () => {
+    expect(isVideoMessage(messages[3]!)).toBe(true);
+    expect(isVideoMessage(messages[0]!)).toBe(false);
+  });
+
+  it('isLocationMessage narrows correctly', () => {
+    expect(isLocationMessage(messages[5]!)).toBe(true);
+    expect(isLocationMessage(messages[0]!)).toBe(false);
+  });
+
   it('isSystemMessage narrows correctly', () => {
-    expect(isSystemMessage(messages[3]!)).toBe(true);
+    expect(isSystemMessage(messages[6]!)).toBe(true);
     expect(isSystemMessage(messages[0]!)).toBe(false);
   });
 
   it('isAIMessage narrows correctly', () => {
-    expect(isAIMessage(messages[4]!)).toBe(true);
+    expect(isAIMessage(messages[7]!)).toBe(true);
     expect(isAIMessage(messages[0]!)).toBe(false);
   });
 
   it('isToolCallMessage narrows correctly', () => {
-    expect(isToolCallMessage(messages[5]!)).toBe(true);
+    expect(isToolCallMessage(messages[8]!)).toBe(true);
     expect(isToolCallMessage(messages[0]!)).toBe(false);
   });
 
   it('isToolResultMessage narrows correctly', () => {
-    expect(isToolResultMessage(messages[6]!)).toBe(true);
+    expect(isToolResultMessage(messages[9]!)).toBe(true);
     expect(isToolResultMessage(messages[0]!)).toBe(false);
   });
 
   it('isCustomMessage narrows correctly', () => {
-    expect(isCustomMessage(messages[7]!)).toBe(true);
+    expect(isCustomMessage(messages[10]!)).toBe(true);
     expect(isCustomMessage(messages[0]!)).toBe(false);
   });
 
@@ -84,7 +105,10 @@ describe('type guards', () => {
     const guards = [
       isTextMessage,
       isImageMessage,
+      isAudioMessage,
+      isVideoMessage,
       isFileMessage,
+      isLocationMessage,
       isSystemMessage,
       isAIMessage,
       isToolCallMessage,

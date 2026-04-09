@@ -4,6 +4,8 @@ import type { ComponentType, JSX } from 'react';
 
 import { memo } from 'react';
 
+import { UnsupportedMessageContent } from './UnsupportedMessageContent';
+
 /**
  * Props for rendering a message through a renderer registry.
  */
@@ -13,7 +15,7 @@ export interface DynamicMessageRendererProps extends MessageRendererProps {
 }
 
 function DefaultFallbackRenderer({ message }: { readonly message: Message }): JSX.Element {
-  return <p>Unsupported message type: {message.type}</p>;
+  return <UnsupportedMessageContent messageType={message.type} />;
 }
 
 /**

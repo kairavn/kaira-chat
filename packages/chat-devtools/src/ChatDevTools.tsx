@@ -58,8 +58,13 @@ function messagePreview(message: Message): string {
       return message.content;
     case 'image':
       return message.url;
+    case 'audio':
+    case 'video':
+      return message.title ?? message.url;
     case 'file':
       return message.name;
+    case 'location':
+      return message.label ?? `${message.latitude}, ${message.longitude}`;
     case 'tool_call':
       return `${message.toolCalls.length} tool call(s)`;
     case 'tool_result':
