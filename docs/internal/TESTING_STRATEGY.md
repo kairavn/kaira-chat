@@ -9,19 +9,18 @@ This file describes the current automated coverage and the practical validation 
 | `@kaira/chat-core`              | strong unit coverage                              | `packages/chat-core/src/**/*.test.ts`, `packages/chat-core/vitest.config.ts`                      |
 | `@kaira/chat-transport-polling` | targeted behavioral coverage                      | `packages/chat-transport-polling/src/polling-transport.test.ts`                                   |
 | `@kaira/chat-provider-dit`      | targeted adapter and parser coverage              | `packages/chat-provider-dit/src/dit-transport.test.ts`                                            |
-| `@kaira/chat-react`             | no automated coverage                             | `packages/chat-react/package.json`                                                                |
-| `@kaira/chat-ui`                | no automated coverage                             | `packages/chat-ui/package.json`                                                                   |
-| `@kaira/chat-devtools`          | no automated coverage                             | `packages/chat-devtools/package.json`                                                             |
+| `@kaira/chat-react`             | focused hook and provider coverage                | `packages/chat-react/src/chat-context.test.tsx`, `packages/chat-react/src/useChatHooks.test.tsx`  |
+| `@kaira/chat-ui`                | focused renderer and composer coverage            | `packages/chat-ui/src/default-renderers.test.tsx`, `packages/chat-ui/src/MessageInput.test.tsx`   |
+| `@kaira/chat-devtools`          | focused runtime inspection coverage               | `packages/chat-devtools/src/useChatDevTools.test.tsx`                                             |
 | `apps/web`                      | targeted route, runtime, and integration coverage | `apps/web/app/api/**/*.test.ts`, `apps/web/lib/**/*.test.ts`, `apps/web/components/**/*.test.tsx` |
-| `apps/docs`                     | no automated coverage                             | no test files under `apps/docs`                                                                   |
+| `apps/docs`                     | lightweight search-integrity coverage             | `apps/docs/lib/generate-search-data.test.ts`                                                      |
 
 ## Weakly tested or untested areas
 
-- React hook behavior, provider lifecycle, and optimistic UI logic
-- UI primitive behavior and default renderer coverage beyond core render paths
-- Devtools state capture and private-internals inspection behavior
+- Remaining React/UI edge cases outside the current high-signal hook and primitive suites
+- Deeper renderer coverage beyond the current fallback and composer-focused paths
 - Demo app API routes, server singleton runtime, and browser-server integration
-- Docs navigation and docs search index drift
+- Broader docs navigation coverage beyond the current search index integrity checks
 
 ## Practical validation guidance
 

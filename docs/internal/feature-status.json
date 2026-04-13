@@ -483,7 +483,7 @@
         "apps/docs/lib/search-data.ts",
         "apps/docs/components/docs/search.tsx"
       ],
-      "notes": "The committed search index is generated from authored MDX, but regeneration is a separate manual step rather than an explicit root workflow.",
+      "notes": "The committed search index is generated from authored MDX and now guarded by integrity tests, but regeneration is still a separate manual step rather than an explicit root workflow.",
       "roadmapCandidate": true
     },
     {
@@ -583,11 +583,15 @@
       "surfaceType": "public-sdk",
       "ownerArea": "@kaira/chat-react",
       "publicSurface": true,
-      "status": "missing",
-      "backing": "none",
-      "evidence": ["packages/chat-react/package.json", "packages/chat-react/src/index.ts"],
-      "notes": "The public React runtime exists, but the package test script is currently `echo 'no tests'` and there are no checked-in tests for provider or hook behavior.",
-      "roadmapCandidate": true
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "packages/chat-react/package.json",
+        "packages/chat-react/src/chat-context.test.tsx",
+        "packages/chat-react/src/useChatHooks.test.tsx"
+      ],
+      "notes": "The React runtime now has focused behavioral coverage for provider lifecycle, connection state, conversation and message subscriptions, streaming hooks, send delegation, and optimistic reconciliation.",
+      "roadmapCandidate": false
     },
     {
       "id": "ui-devtools-package-tests",
@@ -596,15 +600,15 @@
       "surfaceType": "public-sdk",
       "ownerArea": "UI and devtools packages",
       "publicSurface": true,
-      "status": "partial",
+      "status": "implemented",
       "backing": "concrete",
       "evidence": [
         "packages/chat-ui/src/default-renderers.test.tsx",
-        "packages/chat-ui/package.json",
-        "packages/chat-devtools/package.json"
+        "packages/chat-ui/src/MessageInput.test.tsx",
+        "packages/chat-devtools/src/useChatDevTools.test.tsx"
       ],
-      "notes": "@kaira/chat-ui now has focused renderer coverage with Vitest and Testing Library, but @kaira/chat-devtools still has no checked-in automated tests.",
-      "roadmapCandidate": true
+      "notes": "@kaira/chat-ui and @kaira/chat-devtools now have focused behavioral coverage for renderer fallback, typing and composer primitives, runtime capture, engine-swap resets, and panel rendering.",
+      "roadmapCandidate": false
     },
     {
       "id": "demo-app-tests",
@@ -630,15 +634,15 @@
       "surfaceType": "consumer-docs",
       "ownerArea": "apps/docs",
       "publicSurface": false,
-      "status": "missing",
-      "backing": "none",
+      "status": "implemented",
+      "backing": "concrete",
       "evidence": [
         "apps/docs/package.json",
-        "apps/docs/components/docs/search.tsx",
+        "apps/docs/lib/generate-search-data.test.ts",
         "apps/docs/lib/search-data.ts"
       ],
-      "notes": "The docs app is built and typechecked, but there are no automated tests for navigation, search behavior, or content integrity.",
-      "roadmapCandidate": true
+      "notes": "The docs app now has lightweight integrity coverage for the generated search index and the critical top-level docs routes it must expose.",
+      "roadmapCandidate": false
     }
   ]
 }

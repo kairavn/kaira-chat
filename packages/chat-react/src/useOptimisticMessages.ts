@@ -18,6 +18,7 @@ export interface OptimisticMessagesState {
   readonly optimisticMessages: ReadonlyArray<Message>;
   readonly mergedMessages: ReadonlyArray<Message>;
   readonly addOptimisticMessage: (message: Message, clientNonce: string) => void;
+  readonly removeOptimisticMessage: (clientNonce: string) => void;
   readonly reconcileMessage: (message: Message) => void;
 }
 
@@ -38,11 +39,18 @@ export function useOptimisticMessages(
     });
   }, []);
 
-  const reconcileMessage = useCallback((message: Message): void => {
-    const clientNonce = getMessageClientNonce(message);
-    if (!clientNonce) return;
+  const removeOptimisticMessage = useCallback((clientNonce: string): void => {
     setEntries((current) => current.filter((entry) => entry.clientNonce !== clientNonce));
   }, []);
+
+  const reconcileMessage = useCallback(
+    (message: Message): void => {
+      const clientNonce = getMessageClientNonce(message);
+      if (!clientNonce) return;
+      removeOptimisticMessage(clientNonce);
+    },
+    [removeOptimisticMessage],
+  );
 
   const mergedMessages = useMemo(() => {
     const confirmedNonces = new Set(
@@ -60,6 +68,7 @@ export function useOptimisticMessages(
     optimisticMessages,
     mergedMessages,
     addOptimisticMessage,
+    removeOptimisticMessage,
     reconcileMessage,
   };
 }

@@ -273,6 +273,17 @@ export function useChatDevTools(
   );
 
   useEffect(() => {
+    setConnectionState(engine.getConnectionState());
+    setEvents({ events: [], nextId: 1 });
+    setMessages([]);
+    setConversations([]);
+    setStreams([]);
+    setLastNetworkEvent(undefined);
+    setMiddlewareFlows([]);
+    setPlugins(initializePlugins(engine, engine.getConnectionState()));
+  }, [engine]);
+
+  useEffect(() => {
     let isMounted = true;
     const load = async (): Promise<void> => {
       const page = await engine.getConversations();

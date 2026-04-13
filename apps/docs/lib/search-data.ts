@@ -12,14 +12,14 @@ export interface SearchResult {
 
 /**
  * Auto-generated search index from MDX page files.
- * Updated: 2026-03-17
+ * Updated: 2026-04-13
  */
 export const SEARCH_DATA: SearchResult[] = [
   {
     title: 'Introduction',
     href: '/',
     description:
-      'The Kaira Chat SDK is a modular toolkit for building chat experiences with predictable runtime behavior, pluggable infrastructure, and framework-friendly integrations.',
+      'The Kaira Chat SDK is a modular toolkit for building chat experiences with predictable runtime behavior, pluggable infrastructure, and framework-friendly...',
   },
   {
     title: 'Architecture Overview',
@@ -47,12 +47,13 @@ export const SEARCH_DATA: SearchResult[] = [
   {
     title: 'Events',
     href: '/events/',
-    description: 'Events are emitted by ChatEngine and consumed through engine.on() handlers.',
+    description: 'Events are emitted by ChatEngine and consumed through engine.on(...).',
   },
   {
     title: 'Examples',
     href: '/examples/',
-    description: 'Practical examples and patterns for using the Kaira Chat SDK.',
+    description:
+      'Server route layer owns DitTransport and server-only credentials. Client runtime uses ChatProvider with a client ChatEngine backed by PollingTransport. Client...',
   },
   {
     title: 'Middleware',
@@ -67,7 +68,8 @@ export const SEARCH_DATA: SearchResult[] = [
   {
     title: 'Quick Start',
     href: '/quick-start/',
-    description: 'Build a minimal chat app with Next.js and the Kaira Chat SDK.',
+    description:
+      'Build a minimal chat app with Next.js App Router, chat-core, chat-react, and polling transport.',
   },
   {
     title: 'React Integration',
@@ -87,7 +89,7 @@ export const SEARCH_DATA: SearchResult[] = [
   {
     title: 'Documentation Structure',
     href: '/structure/',
-    description: 'How this documentation site is organized and how to navigate it.',
+    description: 'This site is built with Next.js App Router + MDX.',
   },
   {
     title: 'Transport API',

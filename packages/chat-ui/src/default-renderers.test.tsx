@@ -42,14 +42,32 @@ describe('@kaira/chat-ui default renderers', () => {
 
   it('falls back when no renderer is registered for a valid message type', () => {
     render(
-      <MessageRenderer
-        message={{ ...baseMessage, type: 'custom', customType: 'workflow', payload: {} }}
-        registry={new RendererRegistry()}
-      />,
+      <>
+        <MessageRenderer
+          message={{ ...baseMessage, type: 'custom', customType: 'workflow', payload: {} }}
+          registry={new RendererRegistry()}
+        />
+        <MessageRenderer
+          message={{
+            ...baseMessage,
+            id: 'm-tool',
+            type: 'tool_call',
+            toolCalls: [
+              {
+                id: 'call-1',
+                toolName: 'search',
+                arguments: { query: 'docs' },
+              },
+            ],
+          }}
+          registry={new RendererRegistry()}
+        />
+      </>,
     );
 
-    expect(screen.getByText(/Unsupported message/i)).toBeTruthy();
+    expect(screen.getAllByText(/Unsupported message/i)).toHaveLength(2);
     expect(screen.getByText(/Message type: custom/i)).toBeTruthy();
+    expect(screen.getByText(/Message type: tool_call/i)).toBeTruthy();
   });
 
   it('renders streaming ai messages with a text-stream affordance', () => {

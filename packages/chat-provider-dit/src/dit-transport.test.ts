@@ -10,6 +10,46 @@ import {
   parseDitSendMessageResponse,
 } from './dit-transport.js';
 
+function createDitMessage(
+  id: string,
+  createdAt: string,
+  overrides: Partial<{
+    readonly chatroom_id: string;
+    readonly message: string;
+    readonly speaker_type: 'user' | 'chatbot' | 'system';
+    readonly speaker_id: string;
+    readonly metadata: {
+      readonly clientNonce?: string;
+    };
+  }> = {},
+): Record<string, unknown> {
+  return {
+    id,
+    chatroom_id: overrides.chatroom_id ?? 'room-1',
+    message: overrides.message ?? id,
+    created_at: createdAt,
+    ...(overrides.speaker_type ? { speaker_type: overrides.speaker_type } : {}),
+    ...(overrides.speaker_id ? { speaker_id: overrides.speaker_id } : {}),
+    ...(overrides.metadata ? { metadata: overrides.metadata } : {}),
+  };
+}
+
+function eventPayloadId(value: unknown): string {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'payload' in value &&
+    typeof value.payload === 'object' &&
+    value.payload !== null &&
+    'id' in value.payload &&
+    typeof value.payload.id === 'string'
+  ) {
+    return value.payload.id;
+  }
+
+  throw new Error('Expected a transport event payload with a string id');
+}
+
 function createJsonResponse(body: unknown, status: number = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -87,6 +127,36 @@ describe('DIT response parsers', () => {
         data: [{ id: 1 }],
       }),
     ).toThrow(/data\[0\]\.id/);
+  });
+
+  it('rejects malformed optional fetch fields', () => {
+    expect(() =>
+      parseDitFetchMessagesResponse({
+        success: true,
+        data: [
+          {
+            id: 'm1',
+            chatroom_id: 'room-1',
+            message: 'hello',
+            metadata: { clientNonce: 123 },
+          },
+        ],
+      }),
+    ).toThrow(/data\[0\]\.metadata\.clientNonce/);
+
+    expect(() =>
+      parseDitFetchMessagesResponse({
+        success: true,
+        data: [
+          {
+            id: 'm1',
+            chatroom_id: 'room-1',
+            message: 'hello',
+            speaker_type: 'agent',
+          },
+        ],
+      }),
+    ).toThrow(/data\[0\]\.speaker_type/);
   });
 
   it('rejects malformed send payloads', () => {
@@ -245,5 +315,82 @@ describe('DitTransport', () => {
 
     expect(receivedHandler).not.toHaveBeenCalled();
     expect(requestBodies[0]).toContain('"clientNonce":"nonce-1"');
+  });
+
+  it('bootstraps multi-page history in timestamp order without duplicate emits', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) =>
+      createDitMessage(
+        `page-one-${index + 1}`,
+        new Date(Date.UTC(2024, 0, 1, 0, index)).toISOString(),
+        {
+          message: `page-one-${index + 1}`,
+          speaker_type: 'chatbot',
+          speaker_id: 'bot-1',
+        },
+      ),
+    );
+    const secondPage = [
+      createDitMessage('page-zero-2', '2023-12-31T23:58:00.000Z', {
+        message: 'older second',
+        speaker_type: 'chatbot',
+        speaker_id: 'bot-1',
+      }),
+      createDitMessage('page-one-1', '2024-01-01T00:00:00.000Z', {
+        message: 'duplicate first page',
+        speaker_type: 'chatbot',
+        speaker_id: 'bot-1',
+      }),
+      createDitMessage('page-zero-1', '2023-12-31T23:57:00.000Z', {
+        message: 'older first',
+        speaker_type: 'chatbot',
+        speaker_id: 'bot-1',
+      }),
+    ];
+
+    const transport = new DitTransport({
+      apiUrl: 'https://example.test',
+      apiKey: 'secret',
+      chatroomId: 'room-1',
+      senderId: 'user-1',
+      chatbotNickname: 'bot-1',
+      fetch: createFetchSequence([
+        {
+          method: 'GET',
+          assert: (url) => {
+            expect(url).toContain('direction=before');
+            expect(url).toContain('limit=100');
+          },
+          response: () =>
+            createJsonResponse({
+              success: true,
+              data: firstPage,
+            }),
+        },
+        {
+          method: 'GET',
+          assert: (url) => {
+            expect(url).toContain('direction=before');
+            expect(url).toContain('cursor=page-one-1');
+          },
+          response: () =>
+            createJsonResponse({
+              success: true,
+              data: secondPage,
+            }),
+        },
+      ]),
+    });
+
+    const messageHandler = vi.fn();
+    transport.onMessage(messageHandler);
+
+    await transport.connect();
+
+    const payloadIds = messageHandler.mock.calls.map(([event]) => eventPayloadId(event));
+
+    expect(payloadIds).toHaveLength(102);
+    expect(payloadIds.slice(0, 3)).toEqual(['page-zero-1', 'page-zero-2', 'page-one-1']);
+    expect(payloadIds.at(-1)).toBe('page-one-100');
+    expect(payloadIds.filter((id) => id === 'page-one-1')).toHaveLength(1);
   });
 });

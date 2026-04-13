@@ -64,7 +64,7 @@ export function ChatSurface({
   const messages = useMessages(conversationId);
   const sendMessage = useSendMessage();
   const { message: streamingPreview, isStreaming } = useStreamingMessage(conversationId);
-  const { mergedMessages, addOptimisticMessage, reconcileMessage } =
+  const { mergedMessages, addOptimisticMessage, removeOptimisticMessage, reconcileMessage } =
     useOptimisticMessages(messages);
   const typingParticipants = useTypingParticipants(conversationId);
   const { notifyTyping, stopTyping, isSupported } = useTypingController(conversationId);
@@ -250,6 +250,7 @@ export function ChatSurface({
       });
     } catch (sendError) {
       activeOptimisticNoncesRef.current.delete(nonce);
+      removeOptimisticMessage(nonce);
       setIsThinking(false);
       setThinkingSince(null);
       setError(sendError instanceof Error ? sendError.message : 'Failed to send message');

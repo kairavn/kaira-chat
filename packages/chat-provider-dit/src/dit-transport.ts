@@ -200,7 +200,7 @@ function parseDitTimestamp(value: string | undefined): number {
 }
 
 /**
- * DIT provider transport using PollingTransport under the hood.
+ * DIT transport adapter using PollingTransport under the hood.
  */
 export class DitTransport implements ITransport<MessageTransportEvent, MessageTransportEvent> {
   private readonly config: DitTransportConfig;

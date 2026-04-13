@@ -9,7 +9,9 @@
     "start": "next start",
     "clean": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\"",
     "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -44,6 +46,7 @@
     "shiki": "^4.0.2",
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }
