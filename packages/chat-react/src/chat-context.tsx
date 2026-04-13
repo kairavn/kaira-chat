@@ -7,6 +7,10 @@ import { createContext, useContext, useEffect, useRef } from 'react';
 
 const ChatEngineContext = createContext<ChatEngine | null>(null);
 
+function normalizeError(error: unknown, fallbackMessage: string): Error {
+  return error instanceof Error ? error : new Error(fallbackMessage);
+}
+
 /**
  * Props for `ChatProvider`.
  */
@@ -25,6 +29,9 @@ export interface ChatProviderProps {
 export function ChatProvider(props: ChatProviderProps): JSX.Element {
   const { children, autoConnect = false, onConnectError } = props;
   const engineRef = useRef<ChatEngine | null>(null);
+  const onConnectErrorRef = useRef<typeof onConnectError>(onConnectError);
+  const connectAttemptRef = useRef(0);
+  const disconnectPromiseRef = useRef<Promise<void> | null>(null);
   if (!engineRef.current) {
     if (props.engine) {
       engineRef.current = props.engine;
@@ -37,25 +44,60 @@ export function ChatProvider(props: ChatProviderProps): JSX.Element {
   const engine = engineRef.current;
 
   useEffect(() => {
-    if (!autoConnect) return;
-    let isMounted = true;
+    onConnectErrorRef.current = onConnectError;
+  }, [onConnectError]);
+
+  useEffect(() => {
+    if (!autoConnect) {
+      return;
+    }
+
+    let isActive = true;
+    const attemptId = connectAttemptRef.current + 1;
+    connectAttemptRef.current = attemptId;
+
     const connect = async (): Promise<void> => {
       try {
+        const pendingDisconnect = disconnectPromiseRef.current;
+        if (pendingDisconnect) {
+          await pendingDisconnect;
+        }
+
+        if (!isActive || connectAttemptRef.current !== attemptId) {
+          return;
+        }
+
         await engine.connect();
       } catch (error) {
-        if (!isMounted) return;
-        const normalizedError =
-          error instanceof Error ? error : new Error('Failed to connect ChatEngine');
-        onConnectError?.(normalizedError);
+        if (!isActive || connectAttemptRef.current !== attemptId) {
+          return;
+        }
+
+        const normalizedError = normalizeError(error, 'Failed to connect ChatEngine');
+        onConnectErrorRef.current?.(normalizedError);
       }
     };
     void connect();
 
     return () => {
-      isMounted = false;
-      void engine.disconnect();
+      isActive = false;
+      connectAttemptRef.current++;
+
+      const disconnectPromise = engine
+        .disconnect()
+        .catch((error) => {
+          const normalizedError = normalizeError(error, 'Failed to disconnect ChatEngine');
+          onConnectErrorRef.current?.(normalizedError);
+        })
+        .finally(() => {
+          if (disconnectPromiseRef.current === disconnectPromise) {
+            disconnectPromiseRef.current = null;
+          }
+        });
+
+      disconnectPromiseRef.current = disconnectPromise;
     };
-  }, [autoConnect, engine, onConnectError]);
+  }, [autoConnect, engine]);
 
   return <ChatEngineContext.Provider value={engine}>{children}</ChatEngineContext.Provider>;
 }

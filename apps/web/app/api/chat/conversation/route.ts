@@ -1,20 +1,29 @@
 import { NextResponse } from 'next/server';
 
-import {
-  ensureDemoConversationCreated,
-  getServerChatEngineContext,
-} from '@/lib/chat/server-chat-engine';
+import { getDemoRuntime } from '@/lib/demo/server/runtime-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(): Promise<NextResponse> {
+  const runtime = getDemoRuntime('dit-modive');
+  const availability = runtime.isAvailable();
+  if (!availability.available) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: availability.reason ?? 'Demo unavailable.',
+      },
+      { status: 503 },
+    );
+  }
+
   try {
-    await ensureDemoConversationCreated();
-    const context = await getServerChatEngineContext();
+    const bootstrap = await runtime.ensureConversation();
     return NextResponse.json({
       success: true,
-      conversationId: context.conversationId,
+      conversationId: bootstrap.conversationId,
+      data: bootstrap,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown server error';

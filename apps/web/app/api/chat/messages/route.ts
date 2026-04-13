@@ -2,7 +2,7 @@ import type { MessageMetadata } from '@kaira/chat-core';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getChatMessages, sendChatMessage } from '@/lib/chat/server-chat-engine';
+import { getDemoRuntime } from '@/lib/demo/server/runtime-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,17 +13,21 @@ interface SendMessageBody {
   readonly metadata?: MessageMetadata;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function isSendMessageBody(value: unknown): value is SendMessageBody {
-  if (!value || typeof value !== 'object') {
+  if (!isRecord(value)) {
     return false;
   }
-  const body = value as Record<string, unknown>;
-  const metadata = body['metadata'];
+
+  const metadata = value['metadata'];
   const hasValidMetadata =
     metadata === undefined || (typeof metadata === 'object' && metadata !== null);
   return (
-    typeof body['conversationId'] === 'string' &&
-    typeof body['message'] === 'string' &&
+    typeof value['conversationId'] === 'string' &&
+    typeof value['message'] === 'string' &&
     hasValidMetadata
   );
 }
@@ -38,7 +42,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const messages = await getChatMessages(conversationId);
+    const runtime = getDemoRuntime('dit-modive');
+    const availability = runtime.isAvailable();
+    if (!availability.available) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: availability.reason ?? 'Demo unavailable.',
+        },
+        { status: 503 },
+      );
+    }
+
+    const messages = await runtime.getMessages(conversationId);
     return NextResponse.json({
       success: true,
       data: messages,
@@ -51,7 +67,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const json = (await request.json()) as unknown;
+    const json: unknown = await request.json();
     if (!isSendMessageBody(json)) {
       return NextResponse.json({ success: false, error: 'Invalid request body.' }, { status: 400 });
     }
@@ -64,7 +80,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    const message = await sendChatMessage(json.conversationId, text, json.metadata);
+    const runtime = getDemoRuntime('dit-modive');
+    const availability = runtime.isAvailable();
+    if (!availability.available) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: availability.reason ?? 'Demo unavailable.',
+        },
+        { status: 503 },
+      );
+    }
+
+    const message = await runtime.sendMessage(json.conversationId, text, json.metadata);
     return NextResponse.json({
       success: true,
       data: message,

@@ -18,9 +18,10 @@ This file records important implementation choices and limits that are visible i
 
 ## Demo app constraints
 
-- The browser runtime uses polling through `/api/chat/events`; it does not use SSE today. Evidence: `apps/web/lib/chat/engine.ts`, `apps/web/app/api/chat/events/route.ts`.
-- The demo UI uses `demoConfig.chatroomId` directly. The conversation bootstrap route exists but is not wired into the main client flow. Evidence: `apps/web/components/chat/Chat.tsx`, `apps/web/app/api/chat/conversation/route.ts`.
-- The demo UI shows "AI thinking" state, but the current DIT-backed path does not emit stream lifecycle events. Evidence: `apps/web/components/chat/Chat.tsx`, `packages/chat-react/src/useStreamingMessage.ts`, `apps/web/lib/chat/server-chat-engine.ts`.
+- The browser runtime is demo-scoped and route-handler-backed. Polling remains the primary transport, while stream lifecycle updates can also be consumed through demo SSE endpoints. Evidence: `apps/web/lib/demo/client-runtime.ts`, `apps/web/app/api/demos/[demoId]/events/route.ts`, `apps/web/components/demo/StreamEventBridge.tsx`.
+- Demo routing is registry-driven so the showcase can expose multiple isolated runtimes without one global engine in the root layout. Evidence: `apps/web/config/demo-registry.ts`, `apps/web/components/demo/DemoRuntimeProvider.tsx`, `apps/web/app/page.tsx`.
+- The DIT demo remains env-gated, but missing DIT config no longer prevents the rest of `apps/web` from booting. Evidence: `apps/web/config/dit-demo.ts`, `apps/web/lib/chat/server-config.ts`, `apps/web/app/dit-modive/page.tsx`.
+- Local demos exercise stream lifecycle events, typing indicators, seeded media content, and persistence flows without depending on DIT. Evidence: `apps/web/lib/demo/server/runtime-registry.ts`, `apps/web/components/chat/ChatSurface.tsx`, `apps/web/components/demo/PersistenceDemo.tsx`.
 
 ## Docs and workflow constraints
 
@@ -33,7 +34,7 @@ This file records important implementation choices and limits that are visible i
 
 Inferred: `apps/web/lib/chat/event-broker.ts` assumes a single-process server runtime because it uses an in-memory listener set without shared infrastructure.
 
-Inferred: the SSE branch in `apps/web/app/api/chat/events/route.ts` is exploratory or future-facing because the repo contains no browser-side `EventSource` usage.
+Inferred: `apps/web/lib/chat/event-broker.ts` still assumes a single-process server runtime for both polling and SSE fan-out because it remains in-memory and process-local.
 
 Inferred: package READMEs are drift-prone enough that future implementation work should verify examples against code before using them as a change guide.
 

@@ -7,7 +7,7 @@ This document describes the current repository shape and runtime boundaries as r
 | Area                | Role                                                                           | Key paths                                                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Public SDK packages | Runtime, React bindings, UI, devtools, and concrete adapters                   | `packages/chat-core`, `packages/chat-react`, `packages/chat-ui`, `packages/chat-devtools`, `packages/chat-storage-indexeddb`, `packages/chat-transport-polling`, `packages/chat-provider-dit` |
-| Internal demo app   | Next.js app that proxies the DIT-backed runtime for internal use               | `apps/web`                                                                                                                                                                                    |
+| Internal demo app   | Next.js showcase app with DIT-backed and local server-owned demo runtimes      | `apps/web`                                                                                                                                                                                    |
 | Consumer docs app   | Static-export Next.js docs site for SDK consumers                              | `apps/docs`                                                                                                                                                                                   |
 | Tooling             | Root scripts, Turbo, Syncpack, Changesets, ESLint, TS config, GitHub workflows | `package.json`, `turbo.json`, `.syncpackrc.json`, `.changeset`, `.github/workflows`, `packages/eslint-config`, `packages/typescript-config`                                                   |
 | Internal docs       | Implementation guidance, status tracking, and repo safety notes                | `docs/internal`                                                                                                                                                                               |
@@ -37,27 +37,30 @@ Important boundary: `@kaira/chat-provider-dit` is a concrete transport adapter p
 
 Client-side runtime:
 
-- `apps/web/lib/chat/engine.ts`
+- `apps/web/lib/demo/client-runtime.ts`
+- `apps/web/components/demo/DemoRuntimeProvider.tsx`
 - `apps/web/components/chat/*`
 - `apps/web/lib/chat/renderers.ts`
-- `apps/web/config/demo.ts`
+- `apps/web/config/demo-registry.ts`
+- `apps/web/config/dit-demo.ts`
 
 Server-side runtime:
 
 - `apps/web/lib/chat/server-chat-engine.ts`
 - `apps/web/lib/chat/server-config.ts`
 - `apps/web/lib/chat/event-broker.ts`
-- `apps/web/app/api/chat/events/route.ts`
-- `apps/web/app/api/chat/messages/route.ts`
-- `apps/web/app/api/chat/conversation/route.ts`
+- `apps/web/lib/demo/server/runtime-registry.ts`
+- `apps/web/app/api/demos/[demoId]/*`
+- `apps/web/app/api/chat/*`
 
 Current runtime flow:
 
-1. The browser creates a singleton `ChatEngine` in `apps/web/lib/chat/engine.ts`.
-2. That engine uses `PollingTransport` and calls Next.js API routes instead of talking to DIT directly.
-3. The server creates its own singleton `ChatEngine` in `apps/web/lib/chat/server-chat-engine.ts`.
-4. The server engine uses `DitTransport`, which wraps polling and talks to the DIT backend.
-5. Demo UI components read client-side engine state through `@kaira/chat-react` hooks and render via `@kaira/chat-ui`.
+1. The catalog and route metadata come from `apps/web/config/demo-registry.ts`.
+2. Each demo route creates its own browser runtime through `apps/web/lib/demo/client-runtime.ts`.
+3. Browser runtimes use `PollingTransport` against `app/api/demos/[demoId]/*` and persist locally with `IndexedDBStorage`.
+4. Local demos use a server-owned `ChatEngine` plus a local in-memory transport to emit assistant messages, typing, and stream lifecycle events.
+5. The DIT demo keeps its existing server-owned `DitTransport` path in `apps/web/lib/chat/server-chat-engine.ts`.
+6. Stream-capable demos use the SSE branch of the events route to bridge `message:stream:*` events into the browser runtime, while final assistant messages still arrive over the normal polling path.
 
 ## Runtime and data flow
 
@@ -70,11 +73,15 @@ Core runtime:
 
 Demo runtime:
 
-- Browser polling path: `apps/web/lib/chat/engine.ts`
-- Server DIT path: `apps/web/lib/chat/server-chat-engine.ts`
-- Route bridge: `apps/web/app/api/chat/*`
+- Browser demo runtime: `apps/web/lib/demo/client-runtime.ts`
+- Server DIT runtime: `apps/web/lib/chat/server-chat-engine.ts`
+- Server local runtime registry: `apps/web/lib/demo/server/runtime-registry.ts`
+- Route bridge: `apps/web/app/api/demos/[demoId]/*`
 
-Important boundary: the browser demo currently polls JSON from `/api/chat/events`; SSE exists server-side but is not used by the main client runtime.
+Important boundary: polling remains the primary browser transport for messages
+and typing. SSE is used only as a side channel for streamed AI lifecycle events
+in the local streaming demos, and correctness no longer depends on SSE
+completion delivery.
 
 ## Docs and workflow boundaries
 
@@ -102,7 +109,8 @@ Generated from authored content, not runtime code:
 
 Inferred: `apps/web/lib/chat/event-broker.ts` is an in-memory fan-out layer for one server process. There is no shared broker, queue, or external pub/sub in the repo.
 
-Inferred: `apps/web/app/api/chat/events/route.ts` exposes an SSE path, but it is currently latent in normal demo usage because the browser runtime does not use `EventSource`.
+Inferred: the showcase assumes a single Node process. The SSE bridge improves
+local stream demos but does not change the process-local event broker boundary.
 
 See also:
 

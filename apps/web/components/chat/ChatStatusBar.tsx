@@ -5,8 +5,9 @@ import type { ConnectionState } from '@kaira/chat-core';
 interface ChatStatusBarProps {
   readonly connectionState: ConnectionState;
   readonly isSending: boolean;
-  readonly hasConversation: boolean;
   readonly isThinking: boolean;
+  readonly isRuntimeReady: boolean;
+  readonly isTypingSupported: boolean;
 }
 
 /**
@@ -15,16 +16,23 @@ interface ChatStatusBarProps {
 export function ChatStatusBar({
   connectionState,
   isSending,
-  hasConversation,
   isThinking,
+  isRuntimeReady,
+  isTypingSupported,
 }: ChatStatusBarProps): React.JSX.Element {
+  const activityLabel = isSending
+    ? 'Sending...'
+    : isRuntimeReady
+      ? 'Ready'
+      : 'Waiting for connection';
+
   return (
     <div style={{ display: 'flex', gap: 8, color: '#94a3b8', fontSize: 12 }}>
       <span>{connectionState}</span>
       <span>•</span>
-      <span>{isSending ? 'Sending...' : 'Ready'}</span>
+      <span>{activityLabel}</span>
       <span>•</span>
-      <span>{hasConversation ? 'Conversation loaded' : 'Conversation pending'}</span>
+      <span>{isTypingSupported ? 'Typing enabled' : 'Typing unavailable'}</span>
       <span>•</span>
       <span>{isThinking ? 'AI thinking' : 'AI idle'}</span>
     </div>

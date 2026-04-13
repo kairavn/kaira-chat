@@ -260,7 +260,7 @@
       "evidence": [
         "packages/chat-react/src/chat-context.tsx",
         "packages/chat-react/src/index.ts",
-        "apps/web/components/chat/Chat.tsx"
+        "apps/web/components/chat/ChatSurface.tsx"
       ],
       "notes": "The exported React runtime is source-backed and used by the demo app.",
       "roadmapCandidate": false
@@ -279,7 +279,7 @@
         "packages/chat-react/src/index.ts",
         "packages/chat-core/src/types/event.ts"
       ],
-      "notes": "The hook is implemented against core stream events, but the main demo path does not currently emit real stream lifecycle events.",
+      "notes": "The hook is implemented against core stream events and is now exercised by the local apps/web streaming demos over real stream lifecycle events.",
       "roadmapCandidate": true
     },
     {
@@ -359,8 +359,12 @@
       "publicSurface": false,
       "status": "implemented",
       "backing": "concrete",
-      "evidence": ["apps/web/lib/chat/engine.ts", "apps/web/components/chat/Chat.tsx"],
-      "notes": "The browser singleton ChatEngine persists locally with the IndexedDB storage adapter and polls the Next.js server routes instead of talking to DIT directly.",
+      "evidence": [
+        "apps/web/lib/demo/client-runtime.ts",
+        "apps/web/components/demo/DemoRuntimeProvider.tsx",
+        "apps/web/components/chat/ChatSurface.tsx"
+      ],
+      "notes": "The browser runtime is now created per demo, persists locally with IndexedDB, and targets a namespaced demo route surface instead of one global client singleton.",
       "roadmapCandidate": false
     },
     {
@@ -374,10 +378,10 @@
       "backing": "concrete",
       "evidence": [
         "apps/web/lib/chat/server-chat-engine.ts",
-        "apps/web/lib/chat/server-config.ts",
-        "apps/web/app/api/chat/messages/route.ts"
+        "apps/web/lib/demo/server/runtime-registry.ts",
+        "apps/web/app/api/demos/[demoId]/messages/route.ts"
       ],
-      "notes": "The server-owned ChatEngine keeps DIT credentials server-side and proxies message send/list behavior.",
+      "notes": "apps/web now exposes a generalized demo backend registry that serves both the DIT-backed runtime and several local server-owned ChatEngine demos.",
       "roadmapCandidate": false
     },
     {
@@ -387,15 +391,15 @@
       "surfaceType": "demo-app",
       "ownerArea": "apps/web",
       "publicSurface": false,
-      "status": "partial",
+      "status": "implemented",
       "backing": "concrete",
       "evidence": [
-        "apps/web/components/chat/Chat.tsx",
+        "apps/web/components/demo/StreamEventBridge.tsx",
         "packages/chat-react/src/useStreamingMessage.ts",
-        "apps/web/lib/chat/server-chat-engine.ts"
+        "apps/web/lib/demo/server/runtime-registry.ts"
       ],
-      "notes": "The UI shows a thinking state and can render stream previews, but the main DIT-backed runtime path does not emit message:stream events.",
-      "roadmapCandidate": true
+      "notes": "Local Next-backed demos now emit real stream lifecycle events and bridge them into the browser runtime over the demo SSE route, while the DIT path remains non-streaming.",
+      "roadmapCandidate": false
     },
     {
       "id": "demo-typing-ux",
@@ -407,11 +411,11 @@
       "status": "implemented",
       "backing": "concrete",
       "evidence": [
-        "apps/web/components/chat/Chat.tsx",
-        "apps/web/lib/chat/engine.ts",
-        "apps/web/app/api/chat/typing/route.ts"
+        "apps/web/components/chat/ChatSurface.tsx",
+        "apps/web/lib/demo/client-runtime.ts",
+        "apps/web/app/api/demos/[demoId]/typing/route.ts"
       ],
-      "notes": "The demo browser runtime emits and polls typing events through Next.js routes and the in-memory broker. DIT remains message-only, so provider-side assistant typing is not synthesized.",
+      "notes": "Typing indicators remain transport-backed, and the local demos now also synthesize assistant typing through the server runtime for easier verification.",
       "roadmapCandidate": false
     },
     {
@@ -421,15 +425,15 @@
       "surfaceType": "demo-app",
       "ownerArea": "apps/web API",
       "publicSurface": false,
-      "status": "partial",
+      "status": "implemented",
       "backing": "concrete",
       "evidence": [
-        "apps/web/app/api/chat/events/route.ts",
-        "apps/web/lib/chat/event-broker.ts",
-        "apps/web/lib/chat/engine.ts"
+        "apps/web/app/api/demos/[demoId]/events/route.ts",
+        "apps/web/components/demo/StreamEventBridge.tsx",
+        "apps/web/lib/demo/server/runtime-registry.ts"
       ],
-      "notes": "The server route supports text/event-stream, but the browser runtime currently uses polling and there is no EventSource usage in the repo. Inferred: the broker is process-local only.",
-      "roadmapCandidate": true
+      "notes": "The generalized demo events route still supports polling for messages and typing, and local stream-capable demos now consume its SSE branch through an EventSource bridge.",
+      "roadmapCandidate": false
     },
     {
       "id": "demo-conversation-bootstrap-route",
@@ -438,15 +442,15 @@
       "surfaceType": "demo-app",
       "ownerArea": "apps/web API",
       "publicSurface": false,
-      "status": "partial",
+      "status": "implemented",
       "backing": "concrete",
       "evidence": [
-        "apps/web/app/api/chat/conversation/route.ts",
-        "apps/web/lib/chat/server-chat-engine.ts",
-        "apps/web/components/chat/Chat.tsx"
+        "apps/web/app/api/demos/[demoId]/conversation/route.ts",
+        "apps/web/components/demo/SingleConversationDemo.tsx",
+        "apps/web/components/demo/PersistenceDemo.tsx"
       ],
-      "notes": "The route exists and creates a demo conversation, but the main UI path uses the configured chatroom id directly and does not call it.",
-      "roadmapCandidate": true
+      "notes": "Demo routes now actively bootstrap their conversation state from the server route before rendering the chat surface.",
+      "roadmapCandidate": false
     },
     {
       "id": "consumer-docs-app",
@@ -609,15 +613,15 @@
       "surfaceType": "demo-app",
       "ownerArea": "apps/web",
       "publicSurface": false,
-      "status": "missing",
-      "backing": "none",
+      "status": "implemented",
+      "backing": "concrete",
       "evidence": [
-        "apps/web/package.json",
-        "apps/web/app/api/chat/messages/route.ts",
-        "apps/web/components/chat/Chat.tsx"
+        "apps/web/app/api/chat/events/route.test.ts",
+        "apps/web/app/api/demos/[demoId]/events/route.test.ts",
+        "apps/web/config/demo-registry.test.ts"
       ],
-      "notes": "The demo app has source-backed runtime and route behavior, but there are no checked-in route, integration, or end-to-end tests.",
-      "roadmapCandidate": true
+      "notes": "apps/web now has focused Vitest coverage for the event broker, the legacy DIT compatibility route, the generalized demo events route, and the central demo registry.",
+      "roadmapCandidate": false
     },
     {
       "id": "consumer-docs-tests",

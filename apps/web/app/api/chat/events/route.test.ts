@@ -14,6 +14,13 @@ vi.mock('@/lib/chat/server-chat-engine', () => ({
     engine: currentEngine,
     conversationId: 'conversation-1',
   }),
+  getChatMessages: async (conversationId: string) => {
+    const page = await currentEngine.getMessages({
+      conversationId,
+      direction: 'asc',
+    });
+    return page.items;
+  },
 }));
 
 function isBootstrapResponse(value: unknown): value is {
@@ -80,7 +87,7 @@ describe('chat events route', () => {
   });
 
   it('returns incremental typing deltas after a sequence cursor', async () => {
-    publishChatEvent({
+    publishChatEvent('dit-modive', {
       type: 'typing:start',
       timestamp: 1,
       conversationId: 'conversation-1',

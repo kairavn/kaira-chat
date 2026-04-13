@@ -6,6 +6,8 @@ import type {
   Unsubscribe,
 } from '@kaira/chat-core';
 
+import { createChatError } from '@kaira/chat-core';
+
 /**
  * Callback that returns inbound transport events from an external source.
  */
@@ -43,6 +45,8 @@ export interface PollingTransportConfig<
   readonly onPollError?: PollingErrorHandler;
   /** Poll immediately once after connect. Defaults to true. */
   readonly pollImmediately?: boolean;
+  /** Trigger an immediate follow-up poll after a successful send. Defaults to false. */
+  readonly pollAfterSend?: boolean;
 }
 
 /**
@@ -62,6 +66,7 @@ export class PollingTransport<
   private activePollPromise: Promise<void> | undefined;
   private connectionGeneration = 0;
   private consecutiveErrors = 0;
+  private pendingImmediatePoll = false;
 
   constructor(config: PollingTransportConfig<TInbound, TOutbound>) {
     this.config = config;
@@ -78,6 +83,7 @@ export class PollingTransport<
 
     const generation = ++this.connectionGeneration;
     this.consecutiveErrors = 0;
+    this.pendingImmediatePoll = false;
     this.setState('connecting');
     this.setState('connected');
 
@@ -106,6 +112,7 @@ export class PollingTransport<
     this.connectionGeneration++;
     this.setState('disconnecting');
     this.clearPollTimer();
+    this.pendingImmediatePoll = false;
 
     if (this.activePollPromise) {
       await this.activePollPromise;
@@ -119,10 +126,18 @@ export class PollingTransport<
    * Sends an outbound event using configured sender callback.
    */
   async send(event: TOutbound): Promise<void> {
-    if (!this.canPoll() || !this.config.send) {
+    if (!this.config.send) {
       return;
     }
+
+    if (!this.canPoll()) {
+      throw createChatError('state', `Cannot send while the polling transport is ${this.state}.`);
+    }
+
     await this.config.send(event);
+    if (this.config.pollAfterSend === true) {
+      this.requestImmediatePoll();
+    }
   }
 
   /**
@@ -186,7 +201,16 @@ export class PollingTransport<
       } finally {
         this.isPolling = false;
         this.activePollPromise = undefined;
-        if (this.isCurrentGeneration(generation) && this.canPoll()) {
+        const shouldRunImmediatePoll =
+          this.pendingImmediatePoll && this.isCurrentGeneration(generation) && this.canPoll();
+        if (shouldRunImmediatePoll) {
+          this.pendingImmediatePoll = false;
+          this.clearPollTimer();
+        }
+
+        if (shouldRunImmediatePoll) {
+          void this.safePollOnce(generation);
+        } else if (this.isCurrentGeneration(generation) && this.canPoll()) {
           this.scheduleNextPoll(generation);
         }
       }
@@ -226,6 +250,21 @@ export class PollingTransport<
       clearTimeout(this.pollTimer);
       this.pollTimer = undefined;
     }
+  }
+
+  private requestImmediatePoll(generation: number = this.connectionGeneration): void {
+    if (!this.isCurrentGeneration(generation) || !this.canPoll()) {
+      return;
+    }
+
+    if (this.isPolling) {
+      this.pendingImmediatePoll = true;
+      return;
+    }
+
+    this.pendingImmediatePoll = false;
+    this.clearPollTimer();
+    void this.safePollOnce(generation);
   }
 
   private scheduleNextPoll(generation: number): void {

@@ -70,8 +70,8 @@ Use extra caution with these manually maintained or generated-adjacent files:
 ## Common pitfalls
 
 - `@kaira/chat-provider-dit` is a concrete transport adapter. It is not an `IProvider` implementation.
-- The demo browser runtime uses polling through `/api/chat/events`. It does not use SSE today.
-- Streaming helper methods exist in `ChatEngine`, but the demo runtime does not currently emit stream lifecycle events from its DIT-backed path.
+- The demo browser runtime is demo-scoped. Polling remains the primary browser transport, and the local showcase demos add SSE only for stream lifecycle fan-out.
+- Streaming helper methods in `ChatEngine` are exercised by the local demo runtime, while the DIT-backed path remains polling-first.
 - `IProvider` remains a contract-only surface. `IStorage` is still a core contract, but the repo now ships a first-party browser adapter in `@kaira/chat-storage-indexeddb`.
 - The docs app is authored MDX plus generated search data. It is not generated from package exports or tests.
 - Package READMEs and docs examples can drift from runtime behavior.
@@ -80,7 +80,8 @@ Use extra caution with these manually maintained or generated-adjacent files:
 
 - `packages/chat-core/src/engine/chat-engine.ts`
 - `apps/web/lib/chat/server-chat-engine.ts`
-- `apps/web/lib/chat/engine.ts`
+- `apps/web/lib/demo/client-runtime.ts`
+- `apps/web/lib/demo/server/runtime-registry.ts`
 - `.github/workflows/release.yml`
 
 Inferred: `apps/web/lib/chat/event-broker.ts` is process-local and in-memory, so any SSE-style fan-out assumes a single Node process unless the implementation changes.

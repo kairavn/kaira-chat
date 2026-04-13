@@ -4,16 +4,16 @@ This file describes the current automated coverage and the practical validation 
 
 ## Current coverage by surface
 
-| Surface                         | Current coverage                     | Evidence                                                                     |
-| ------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
-| `@kaira/chat-core`              | strong unit coverage                 | `packages/chat-core/src/**/*.test.ts`, `packages/chat-core/vitest.config.ts` |
-| `@kaira/chat-transport-polling` | targeted behavioral coverage         | `packages/chat-transport-polling/src/polling-transport.test.ts`              |
-| `@kaira/chat-provider-dit`      | targeted adapter and parser coverage | `packages/chat-provider-dit/src/dit-transport.test.ts`                       |
-| `@kaira/chat-react`             | no automated coverage                | `packages/chat-react/package.json`                                           |
-| `@kaira/chat-ui`                | no automated coverage                | `packages/chat-ui/package.json`                                              |
-| `@kaira/chat-devtools`          | no automated coverage                | `packages/chat-devtools/package.json`                                        |
-| `apps/web`                      | no automated coverage                | no test files under `apps/web`                                               |
-| `apps/docs`                     | no automated coverage                | no test files under `apps/docs`                                              |
+| Surface                         | Current coverage                                  | Evidence                                                                                          |
+| ------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `@kaira/chat-core`              | strong unit coverage                              | `packages/chat-core/src/**/*.test.ts`, `packages/chat-core/vitest.config.ts`                      |
+| `@kaira/chat-transport-polling` | targeted behavioral coverage                      | `packages/chat-transport-polling/src/polling-transport.test.ts`                                   |
+| `@kaira/chat-provider-dit`      | targeted adapter and parser coverage              | `packages/chat-provider-dit/src/dit-transport.test.ts`                                            |
+| `@kaira/chat-react`             | no automated coverage                             | `packages/chat-react/package.json`                                                                |
+| `@kaira/chat-ui`                | no automated coverage                             | `packages/chat-ui/package.json`                                                                   |
+| `@kaira/chat-devtools`          | no automated coverage                             | `packages/chat-devtools/package.json`                                                             |
+| `apps/web`                      | targeted route, runtime, and integration coverage | `apps/web/app/api/**/*.test.ts`, `apps/web/lib/**/*.test.ts`, `apps/web/components/**/*.test.tsx` |
+| `apps/docs`                     | no automated coverage                             | no test files under `apps/docs`                                                                   |
 
 ## Weakly tested or untested areas
 
@@ -67,6 +67,7 @@ When changing `apps/web`:
 
 - run `pnpm lint`
 - run `pnpm check-types`
+- run `pnpm test --filter web` or `pnpm --filter web test`
 - run `pnpm build`
 - if local env is available, run `pnpm dev:web` and exercise the chat flow plus affected API routes
 
@@ -75,6 +76,12 @@ Validate these paths when relevant:
 - `/api/chat/messages`
 - `/api/chat/events`
 - `/api/chat/conversation`
+
+High-signal coverage should stay focused on route behavior, runtime integration,
+and critical demo flows. The persistence demo now has a dedicated jsdom
+integration test in `apps/web/components/demo/PersistenceDemo.test.tsx` that
+verifies the selected thread restores after a simulated reload without leaking
+another thread's seeded history into the restored view.
 
 ### Docs changes
 

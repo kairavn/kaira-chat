@@ -77,13 +77,13 @@ Turbo environment passthrough is defined in `turbo.json` for:
 ## Incomplete or ambiguous areas
 
 - `apps/docs/lib/search-data.ts` is a committed generated artifact, but there is no root script dedicated to regenerating it
-- `apps/web` includes both polling and SSE server paths, but the browser runtime only uses polling
+- `apps/web` includes polling plus demo-scoped SSE for stream lifecycle updates, and the DIT-backed path remains polling-first
 - The repo contains release configuration, but not a currently active publish workflow
 - Package and app README examples can drift from source exports and current runtime wiring
 
 ## Repo-specific troubleshooting
 
-- If `apps/web` fails at startup, check `apps/web/config/demo.ts` and `apps/web/lib/chat/server-config.ts` first. Both fail fast on missing env.
+- If `apps/web` fails at startup, check `apps/web/config/demo-registry.ts`, `apps/web/config/dit-demo.ts`, and `apps/web/lib/chat/server-config.ts` first. DIT config is optional for non-DIT routes, so failures are more likely to be route-specific now.
 - If docs search looks stale after editing MDX, compare `apps/docs/app/**/*.mdx`, `apps/docs/lib/generate-search-data.ts`, and `apps/docs/lib/search-data.ts`.
 - If internal feature status looks stale, update `docs/internal/feature-status.json`, then run `pnpm docs:status:sync` and `pnpm docs:status:check`.
 - Do not treat `.next`, `out`, or `dist` output as editable source.

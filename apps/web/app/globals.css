@@ -19,6 +19,12 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+code,
+pre {
+  font-family: var(--font-geist-mono), monospace;
 }
 
 * {

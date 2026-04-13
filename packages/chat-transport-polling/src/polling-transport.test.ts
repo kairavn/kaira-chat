@@ -156,6 +156,75 @@ describe('PollingTransport', () => {
     expect(send).toHaveBeenCalledWith(outboundEvent);
   });
 
+  it('rejects outbound sends before the transport is ready', async () => {
+    const send = vi.fn<SendEventFn<TransportEvent<'message'>>>().mockResolvedValue(undefined);
+    const transport = new PollingTransport({
+      poll: vi.fn<() => Promise<ReadonlyArray<TransportEvent<'message'>>>>().mockResolvedValue([]),
+      send,
+    });
+    const outboundEvent = createMessageEvent('m-outbound');
+
+    await expect(transport.send(outboundEvent)).rejects.toMatchObject({
+      kind: 'state',
+      message: 'Cannot send while the polling transport is disconnected.',
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('can trigger an immediate follow-up poll after a successful send', async () => {
+    const send = vi.fn<SendEventFn<TransportEvent<'message'>>>().mockResolvedValue(undefined);
+    const poll = vi
+      .fn<() => Promise<ReadonlyArray<TransportEvent<'message'>>>>()
+      .mockResolvedValue([]);
+    const transport = new PollingTransport({
+      intervalMs: 1000,
+      poll,
+      send,
+      pollAfterSend: true,
+    });
+
+    await transport.connect();
+    expect(poll).toHaveBeenCalledTimes(1);
+
+    await transport.send(createMessageEvent('m-outbound'));
+
+    await vi.waitFor(() => {
+      expect(poll).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('queues exactly one immediate follow-up poll when a send lands during an active poll', async () => {
+    const send = vi.fn<SendEventFn<TransportEvent<'message'>>>().mockResolvedValue(undefined);
+    const deferred = createDeferred<ReadonlyArray<TransportEvent<'message'>>>();
+    const poll = vi
+      .fn<() => Promise<ReadonlyArray<TransportEvent<'message'>>>>()
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(() => deferred.promise)
+      .mockResolvedValueOnce([]);
+    const transport = new PollingTransport({
+      intervalMs: 1000,
+      poll,
+      send,
+      pollAfterSend: true,
+    });
+
+    await transport.connect();
+    expect(poll).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(poll).toHaveBeenCalledTimes(2);
+
+    await transport.send(createMessageEvent('m-outbound'));
+    expect(send).toHaveBeenCalledOnce();
+    expect(poll).toHaveBeenCalledTimes(2);
+
+    deferred.resolve([]);
+
+    await vi.waitFor(() => {
+      expect(poll).toHaveBeenCalledTimes(3);
+    });
+  });
+
   it('stops timers and suppresses delivery after disconnect', async () => {
     const deferred = createDeferred<ReadonlyArray<TransportEvent<'message'>>>();
     const poll = vi

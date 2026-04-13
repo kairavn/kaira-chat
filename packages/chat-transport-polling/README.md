@@ -15,6 +15,7 @@ import { PollingTransport } from '@kaira/chat-transport-polling';
 
 const transport = new PollingTransport({
   intervalMs: 1000,
+  pollAfterSend: true,
   poll: async () => [],
   send: async (event) => {
     console.log('send', event.type);

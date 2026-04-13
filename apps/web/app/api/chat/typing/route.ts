@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { notifyChatTyping, stopChatTyping } from '@/lib/chat/server-chat-engine';
+import { getDemoRuntime } from '@/lib/demo/server/runtime-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,11 +28,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: 'Invalid request body.' }, { status: 400 });
     }
 
-    if (json.action === 'start') {
-      await notifyChatTyping(json.conversationId);
-    } else {
-      await stopChatTyping(json.conversationId);
+    const runtime = getDemoRuntime('dit-modive');
+    const availability = runtime.isAvailable();
+    if (!availability.available) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: availability.reason ?? 'Demo unavailable.',
+        },
+        { status: 503 },
+      );
     }
+
+    await runtime.sendTyping(json.action, json.conversationId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

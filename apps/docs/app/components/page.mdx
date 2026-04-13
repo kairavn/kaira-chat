@@ -320,14 +320,14 @@ export const engine = new ChatEngine();`}
 
 Tables are styled automatically:
 
-| Property    | Type                        | Required | Description                          |
-| ----------- | --------------------------- | -------- | ------------------------------------ |
-| `id`        | `string`                    | Yes      | Unique identifier for the message    |
-| `type`      | `MessageType`               | Yes      | Message discriminator                |
-| `sender`    | `Participant`               | Yes      | Message sender                       |
-| `timestamp` | `number`                    | Yes      | Unix timestamp in milliseconds       |
-| `status`    | `MessageStatus`             | Yes      | Delivery lifecycle status            |
-| `metadata`  | `MessageMetadata`           | No       | Optional metadata (e.g. clientNonce) |
+| Property    | Type              | Required | Description                          |
+| ----------- | ----------------- | -------- | ------------------------------------ |
+| `id`        | `string`          | Yes      | Unique identifier for the message    |
+| `type`      | `MessageType`     | Yes      | Message discriminator                |
+| `sender`    | `Participant`     | Yes      | Message sender                       |
+| `timestamp` | `number`          | Yes      | Unix timestamp in milliseconds       |
+| `status`    | `MessageStatus`   | Yes      | Delivery lifecycle status            |
+| `metadata`  | `MessageMetadata` | No       | Optional metadata (e.g. clientNonce) |
 
 ## Lists
 

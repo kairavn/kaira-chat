@@ -4,7 +4,7 @@ import { ChatEngine } from '@kaira/chat-core';
 import { DitTransport } from '@kaira/chat-provider-dit';
 
 import { publishChatEvent } from './event-broker';
-import { getChatDemoConfig } from './server-config';
+import { getChatDemoAvailability, getChatDemoConfig } from './server-config';
 
 interface ServerChatEngineContext {
   readonly engine: ChatEngine;
@@ -16,7 +16,7 @@ let hasCreatedConversation = false;
 const CHAT_HISTORY_LIMIT = 2000;
 
 function forwardEvent(event: ChatEvent): void {
-  publishChatEvent(event);
+  publishChatEvent('dit-modive', event);
 }
 
 async function buildContext(): Promise<ServerChatEngineContext> {
@@ -63,6 +63,10 @@ async function buildContext(): Promise<ServerChatEngineContext> {
  * Returns a singleton server-owned ChatEngine.
  */
 export async function getServerChatEngineContext(): Promise<ServerChatEngineContext> {
+  if (!getChatDemoAvailability().available) {
+    throw new Error('The DIT demo is unavailable because its environment variables are missing.');
+  }
+
   if (!engineContextPromise) {
     engineContextPromise = buildContext();
   }
@@ -134,4 +138,11 @@ export async function getChatMessages(conversationId: string): Promise<ReadonlyA
     limit: CHAT_HISTORY_LIMIT,
   });
   return result.items;
+}
+
+export async function listChatConversations(): Promise<ReadonlyArray<{ readonly id: string }>> {
+  const config = getChatDemoConfig();
+  await ensureDemoConversationCreated();
+
+  return [{ id: config.chatroomId }];
 }
