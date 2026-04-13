@@ -13,7 +13,7 @@
       "packages": ["@kaira/chat-devtools", "@kaira/chat-react", "@kaira/chat-ui"],
       "dependencies": ["react", "react-dom"],
       "dependencyTypes": ["peer"],
-      "pinVersion": "^18 || ^19"
+      "pinVersion": ">=19.0.0"
     },
     {
       "label": "Keep shared external dependencies aligned",

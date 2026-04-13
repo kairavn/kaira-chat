@@ -9,6 +9,7 @@ import type {
 import type { ReactNode } from 'react';
 
 import { act, cleanup, renderHook } from '@testing-library/react';
+import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ChatEngine } from '@kaira/chat-core';

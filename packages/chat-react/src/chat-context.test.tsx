@@ -10,7 +10,7 @@ import type {
 import type { JSX, ReactNode } from 'react';
 
 import { act, render, screen } from '@testing-library/react';
-import { StrictMode } from 'react';
+import React, { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ChatEngine } from '@kaira/chat-core';
@@ -70,8 +70,8 @@ class ControlledTransport implements ITransport<
     this.setState('disconnected');
   }
 
-  async send(_event: TransportEvent<'message'>): Promise<void> {
-    return;
+  async send(event: TransportEvent<'message'>): Promise<void> {
+    void event;
   }
 
   onMessage(handler: (event: TransportEvent<'message'>) => void): Unsubscribe {
