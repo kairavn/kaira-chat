@@ -17,7 +17,10 @@ export interface ChatProviderProps {
 - Pass `engine` when you already created one.
 - Pass `createEngine` for lazy initialization.
 - `ChatProvider` requires one of `engine` or `createEngine`; otherwise it throws.
-- Set `autoConnect` for mount/unmount lifecycle handling.
+- `ChatProvider` creates or captures one stable engine instance per mounted provider.
+- Set `autoConnect` for mount/unmount lifecycle handling. In React Strict Mode,
+  the provider tolerates mount cleanup replay and reconnects the same engine
+  instead of getting stuck after the development-only remount cycle.
 
 ## Hooks
 
@@ -36,6 +39,12 @@ export interface ChatProviderProps {
 `useStreamingMessage` only clears its local preview when the matching
 conversation and active stream message finish or error.
 
+`useConversation()`, `useMessages()`, `useStreamingMessage()`, and
+`useTypingState()` now keep their last snapshot scoped to the currently rendered
+conversation id. When the caller switches ids, the hook returns the last
+matching snapshot for that id rather than briefly flashing unrelated or empty
+state during effect resubscription.
+
 ## Example Chat UI
 
 ```tsx
@@ -44,6 +53,7 @@ conversation and active stream message finish or error.
 import type { JSX } from 'react';
 
 import {
+  ChatProvider,
   useMessages,
   useOptimisticMessages,
   useSendMessage,
@@ -52,6 +62,10 @@ import {
   useTypingParticipants,
 } from '@kaira/chat-react';
 import { MessageInput, ThinkingIndicator, TypingIndicator } from '@kaira/chat-ui';
+
+import { createEngine } from '@/lib/chat-engine';
+
+const engine = createEngine();
 
 export function ChatPanel(props: { readonly conversationId: string }): JSX.Element {
   const { conversationId } = props;
@@ -93,6 +107,17 @@ export function ChatPanel(props: { readonly conversationId: string }): JSX.Eleme
         }}
       />
     </section>
+  );
+}
+
+export function ChatRuntime(props: { readonly conversationId: string }): JSX.Element {
+  return (
+    <ChatProvider
+      engine={engine}
+      autoConnect
+    >
+      <ChatPanel conversationId={props.conversationId} />
+    </ChatProvider>
   );
 }
 ```

@@ -1,7 +1,7 @@
 /**
  * Search data for documentation pages.
  * This is auto-generated from MDX files at build time.
- * To regenerate, run: node -e "[generation script]" > lib/search-data.ts
+ * To regenerate, run: node --experimental-strip-types --input-type=module <<'EOF' ... EOF
  */
 
 export interface SearchResult {

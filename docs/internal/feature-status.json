@@ -607,7 +607,7 @@
         "packages/chat-react/src/chat-context.test.tsx",
         "packages/chat-react/src/useChatHooks.test.tsx"
       ],
-      "notes": "The React runtime now has focused behavioral coverage for provider lifecycle, connection state, conversation and message subscriptions, streaming hooks, send delegation, and optimistic reconciliation.",
+      "notes": "The React runtime now has focused behavioral coverage for provider lifecycle, Strict Mode autoConnect replay, connection state, conversation and message subscriptions, streaming hooks, send delegation, and optimistic reconciliation.",
       "roadmapCandidate": false
     },
     {
@@ -637,11 +637,11 @@
       "status": "implemented",
       "backing": "concrete",
       "evidence": [
+        "apps/web/components/demo/DemoRuntimeProvider.test.tsx",
         "apps/web/lib/demo/server/demo-websocket-server.test.ts",
-        "apps/web/app/api/demos/websocket/control/route.test.ts",
-        "apps/web/config/demo-registry.test.ts"
+        "apps/web/app/api/demos/websocket/control/route.test.ts"
       ],
-      "notes": "apps/web now has focused Vitest coverage for the WebSocket bridge helpers, the demo reconnect control route, and the central demo registry alongside the existing route and runtime tests.",
+      "notes": "apps/web now has focused Vitest coverage for demo runtime reuse and reconnect readiness, the WebSocket bridge helpers, and the demo reconnect control route alongside the existing route and runtime tests.",
       "roadmapCandidate": false
     },
     {

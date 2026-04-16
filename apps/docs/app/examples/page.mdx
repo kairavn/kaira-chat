@@ -11,7 +11,13 @@
 
 1. Server route layer owns `DitTransport` and server-only credentials.
 2. Client runtime uses `ChatProvider` with a client `ChatEngine` backed by `PollingTransport`.
-3. Client transport talks to `/api/chat/events` and `/api/chat/messages`.
+3. Client transport talks to demo-scoped routes under `/api/demos/[demoId]/*`, with a
+   session-aware URL builder on the client.
+
+The checked-in `apps/web` demo app now uses `/api/demos/[demoId]/conversation`,
+`/api/demos/[demoId]/events`, and `/api/demos/[demoId]/messages` as the primary
+route surface. Legacy `/api/chat/*` routes still exist only as compatibility wrappers
+for the older DIT-only path.
 
 ```tsx
 // components/chat/ChatRuntimeProvider.tsx
@@ -72,9 +78,18 @@ import type { Message, TransportEvent } from '@kaira/chat-core';
 import { ChatSerializer } from '@kaira/chat-core';
 import { PollingTransport } from '@kaira/chat-transport-polling';
 
+const demoId = 'next-backend';
+const sessionId = crypto.randomUUID();
 const conversationId = 'demo-conversation';
 const serializer = new ChatSerializer();
 let cursor: string | undefined;
+
+function buildDemoRouteUrl(path: string, searchParams?: URLSearchParams): string {
+  const nextSearchParams = new URLSearchParams(searchParams);
+  nextSearchParams.set('sessionId', sessionId);
+  const queryString = nextSearchParams.toString();
+  return `/api/demos/${demoId}/${path}${queryString.length > 0 ? `?${queryString}` : ''}`;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -109,7 +124,7 @@ const transport = new PollingTransport<TransportEvent<'message'>, TransportEvent
       searchParams.set('cursor', cursor);
     }
 
-    const response = await fetch(`/api/chat/events?${searchParams.toString()}`);
+    const response = await fetch(buildDemoRouteUrl('events', searchParams));
     const json = parsePollResponse(await response.json());
     if (!json.success) {
       return [];
@@ -131,7 +146,7 @@ const transport = new PollingTransport<TransportEvent<'message'>, TransportEvent
         ? event.payload.content
         : '';
 
-    await fetch('/api/chat/messages', {
+    await fetch(buildDemoRouteUrl('messages'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -181,7 +196,10 @@ function parseBootstrapResponse(value: unknown): void {
 }
 
 async function bootstrapConversation(): Promise<void> {
-  const response = await fetch('/api/chat/conversation', {
+  const searchParams = new URLSearchParams({
+    sessionId,
+  });
+  const response = await fetch(`/api/demos/websocket/conversation?${searchParams.toString()}`, {
     method: 'POST',
   });
   parseBootstrapResponse(await response.json());
@@ -261,6 +279,8 @@ Caveats:
 - If the socket drops, `WebSocketTransport` handles reconnect attempts, but your
   backend still needs to accept the resumed session and replay any required
   state.
+- If you are maintaining older code that still hits `/api/chat/*`, treat those
+  routes as compatibility wrappers rather than the preferred integration shape.
 
 ## 4) Streaming AI Example
 

@@ -73,15 +73,18 @@ When changing `apps/web`:
 
 Validate these paths when relevant:
 
-- `/api/chat/messages`
-- `/api/chat/events`
-- `/api/chat/conversation`
+- `/api/demos/[demoId]/messages`
+- `/api/demos/[demoId]/events`
+- `/api/demos/[demoId]/conversation`
+- `/api/chat/messages`, `/api/chat/events`, and `/api/chat/conversation` only when validating the legacy DIT compatibility wrappers
 
 High-signal coverage should stay focused on route behavior, runtime integration,
 and critical demo flows. The persistence demo now has a dedicated jsdom
 integration test in `apps/web/components/demo/PersistenceDemo.test.tsx` that
 verifies the selected thread restores after a simulated reload without leaking
-another thread's seeded history into the restored view.
+another thread's seeded history into the restored view. `apps/web/components/demo/DemoRuntimeProvider.test.tsx`
+also covers runtime reuse and reconnect readiness when the derived runtime key
+changes.
 
 ### Docs changes
 
@@ -91,6 +94,12 @@ When changing `apps/docs` or internal docs:
 - run `pnpm check-types`
 - run `pnpm build`
 - verify that `apps/docs/lib/search-data.ts` still matches the authored docs pages if MDX content changed
+
+Vitest 4 note:
+
+- `--runInBand` is not a valid Vitest CLI flag in this repo's current toolchain
+- prefer file filtering such as `pnpm --filter web test -- DemoRuntimeProvider.test.tsx`
+- use `--no-file-parallelism` only when you explicitly need serial file execution
 
 ## What to validate before modifying key areas
 

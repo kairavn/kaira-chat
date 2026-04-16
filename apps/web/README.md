@@ -90,6 +90,10 @@ deterministic quick actions so specific backend and renderer paths can be
 verified without relying on prompt parsing alone. Stream-capable demos still
 bridge `message:stream:*` events into the browser through the demo SSE route,
 but the final assistant reply also lands through the normal message transport.
+`DemoRuntimeProvider` now remounts its provider instance when the derived
+runtime key changes, which keeps an existing demo runtime stable across normal
+re-renders and only returns the readiness state to `connecting` when a genuinely
+new runtime is needed or `reconnect()` is called.
 The `/websocket` route stays additive and local-only: it bootstraps the
 conversation over the existing HTTP demo routes, then uses a demo-only
 WebSocket server on `localhost:3021` for message and typing traffic so connect,

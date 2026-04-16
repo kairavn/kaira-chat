@@ -58,12 +58,26 @@ function ChatScreen(): JSX.Element {
 
 export function App(): JSX.Element {
   return (
-    <ChatProvider engine={engine}>
+    <ChatProvider
+      engine={engine}
+      autoConnect
+    >
       <ChatScreen />
     </ChatProvider>
   );
 }
 ```
+
+`ChatProvider` keeps a stable engine instance for each mounted provider. If you
+prefer lazy creation, pass `createEngine` instead of `engine`; the factory runs
+once per mount. With `autoConnect`, the provider manages connect/disconnect and
+survives React Strict Mode cleanup replay without leaving the engine stuck in a
+stale connection state.
+
+Conversation-scoped hooks such as `useConversation()`, `useMessages()`,
+`useStreamingMessage()`, and `useTypingState()` preserve the last snapshot that
+matches the current conversation id while subscriptions refresh, so changing ids
+does not briefly flash empty or unrelated state.
 
 Additional typing hooks:
 

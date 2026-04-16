@@ -38,12 +38,10 @@ import { ChatProvider } from '@kaira/chat-react';
 
 import { createEngine } from '@/lib/chat-engine';
 
-const engine = createEngine();
-
 export function Providers(props: { readonly children: React.ReactNode }): JSX.Element {
   return (
     <ChatProvider
-      engine={engine}
+      createEngine={createEngine}
       autoConnect
     >
       {props.children}
@@ -51,6 +49,11 @@ export function Providers(props: { readonly children: React.ReactNode }): JSX.El
   );
 }
 ```
+
+`ChatProvider` keeps one stable engine instance for each mounted provider. Using
+`createEngine` lets the provider lazily construct that instance once per mount,
+while `autoConnect` handles the connection lifecycle and tolerates React Strict
+Mode remount replay during development.
 
 ## 4) Send and Render Messages
 
@@ -90,6 +93,10 @@ export function ChatScreen(): JSX.Element {
   );
 }
 ```
+
+The conversation-scoped hooks preserve their last matching snapshot while they
+resubscribe, so switching between conversation ids does not briefly surface
+another thread's data or a synthetic empty state before the next update lands.
 
 ## 5) Next.js App Router Wiring
 
