@@ -14,7 +14,6 @@ export function useConnectionState(): ConnectionState {
   const [state, setState] = useState<ConnectionState>(() => engine.getConnectionState());
 
   useEffect(() => {
-    setState(engine.getConnectionState());
     return engine.on('connection:state', (event) => {
       setState((current) => (current === event.state ? current : event.state));
     });

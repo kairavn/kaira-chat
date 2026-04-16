@@ -20,18 +20,10 @@ interface TableOfContentsProps {
 export function TableOfContents({ className }: TableOfContentsProps): JSX.Element {
   const [headings, setHeadings] = useState<TOCItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
-  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-
-  // Mount effect
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Re-scan headings when pathname changes
   useEffect(() => {
-    if (!mounted) return;
-
     // Delay to ensure DOM is ready after page transition
     const timer = setTimeout(() => {
       const headingElements = document.querySelectorAll('h2, h3, h4');
@@ -47,11 +39,11 @@ export function TableOfContents({ className }: TableOfContentsProps): JSX.Elemen
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [pathname, mounted]);
+  }, [pathname]);
 
   // Set up intersection observer for scroll spy
   useEffect(() => {
-    if (!mounted || headings.length === 0) return;
+    if (headings.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -75,7 +67,7 @@ export function TableOfContents({ className }: TableOfContentsProps): JSX.Elemen
     });
 
     return () => observer.disconnect();
-  }, [headings, mounted]);
+  }, [headings]);
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>, id: string): void => {
     e.preventDefault();
@@ -95,8 +87,7 @@ export function TableOfContents({ className }: TableOfContentsProps): JSX.Elemen
     }
   };
 
-  // Don't render until mounted to avoid hydration issues
-  if (!mounted || headings.length === 0) {
+  if (headings.length === 0) {
     return (
       <div className={cn('hidden xl:block', className)}>
         <div className="sticky top-24">

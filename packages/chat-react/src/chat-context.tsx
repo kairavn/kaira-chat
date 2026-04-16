@@ -3,7 +3,7 @@
 import type { ChatEngine } from '@kaira/chat-core';
 import type { JSX, ReactNode } from 'react';
 
-import { createContext, useContext, useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 const ChatEngineContext = createContext<ChatEngine | null>(null);
 
@@ -28,20 +28,20 @@ export interface ChatProviderProps {
  */
 export function ChatProvider(props: ChatProviderProps): JSX.Element {
   const { children, autoConnect = false, onConnectError } = props;
-  const engineRef = useRef<ChatEngine | null>(null);
+  const [engine] = useState<ChatEngine>(() => {
+    if (props.engine) {
+      return props.engine;
+    }
+
+    if (props.createEngine) {
+      return props.createEngine();
+    }
+
+    throw new Error('ChatProvider requires either an engine or createEngine.');
+  });
   const onConnectErrorRef = useRef<typeof onConnectError>(onConnectError);
   const connectAttemptRef = useRef(0);
   const disconnectPromiseRef = useRef<Promise<void> | null>(null);
-  if (!engineRef.current) {
-    if (props.engine) {
-      engineRef.current = props.engine;
-    } else if (props.createEngine) {
-      engineRef.current = props.createEngine();
-    } else {
-      throw new Error('ChatProvider requires either an engine or createEngine.');
-    }
-  }
-  const engine = engineRef.current;
 
   useEffect(() => {
     onConnectErrorRef.current = onConnectError;

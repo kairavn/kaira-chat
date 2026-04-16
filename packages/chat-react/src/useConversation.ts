@@ -6,23 +6,42 @@ import { useEffect, useState } from 'react';
 
 import { useChatEngine } from './chat-context';
 
+interface ConversationSnapshot {
+  readonly conversationId: string;
+  readonly conversation: Conversation | undefined;
+}
+
 /**
  * Loads and subscribes to one conversation.
  */
 export function useConversation(conversationId: string): Conversation | undefined {
   const engine = useChatEngine();
-  const [conversation, setConversation] = useState<Conversation | undefined>(undefined);
+  const [snapshot, setSnapshot] = useState<ConversationSnapshot | undefined>(undefined);
 
   useEffect(() => {
-    setConversation(undefined);
     let isMounted = true;
 
     const loadConversation = async (): Promise<void> => {
       const nextConversation = await engine.getConversation(conversationId);
       if (!isMounted) return;
-      setConversation((current) => {
-        if (!current || !nextConversation) return nextConversation;
-        return current.updatedAt > nextConversation.updatedAt ? current : nextConversation;
+      setSnapshot((current) => {
+        const currentConversation =
+          current?.conversationId === conversationId ? current.conversation : undefined;
+
+        if (!currentConversation || !nextConversation) {
+          return {
+            conversationId,
+            conversation: nextConversation,
+          };
+        }
+
+        return {
+          conversationId,
+          conversation:
+            currentConversation.updatedAt > nextConversation.updatedAt
+              ? currentConversation
+              : nextConversation,
+        };
       });
     };
 
@@ -30,7 +49,19 @@ export function useConversation(conversationId: string): Conversation | undefine
 
     const unsubscribe = engine.on('conversation:updated', (event) => {
       if (event.conversation.id !== conversationId) return;
-      setConversation((current) => (current === event.conversation ? current : event.conversation));
+      setSnapshot((current) => {
+        if (
+          current?.conversationId === conversationId &&
+          current.conversation === event.conversation
+        ) {
+          return current;
+        }
+
+        return {
+          conversationId,
+          conversation: event.conversation,
+        };
+      });
     });
 
     return () => {
@@ -39,5 +70,5 @@ export function useConversation(conversationId: string): Conversation | undefine
     };
   }, [conversationId, engine]);
 
-  return conversation;
+  return snapshot?.conversationId === conversationId ? snapshot.conversation : undefined;
 }

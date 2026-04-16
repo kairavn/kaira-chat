@@ -43,13 +43,13 @@
     "@kaira/chat-react": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@testing-library/react": "^16.3.2",
-    "@types/node": "^22.19.17",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "jsdom": "^29.0.2",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.4"
   },
   "engines": {
     "node": ">=18"

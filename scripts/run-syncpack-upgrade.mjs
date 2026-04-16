@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 const MANAGED_DEPENDENCIES = [
   '@types/node',
@@ -26,17 +27,17 @@ const OPTION_FLAGS_WITH_VALUE = new Set([
   '--target',
 ]);
 
-function escapeRegexPattern(pattern) {
+export function escapeRegexPattern(pattern) {
   return pattern.replaceAll(/[|\\{}()[\]^$+?.]/g, '\\$&');
 }
 
-function createDependencyMatcher(pattern) {
+export function createDependencyMatcher(pattern) {
   const regexPattern = `^${escapeRegexPattern(pattern).replaceAll('*', '.*')}$`;
 
   return new RegExp(regexPattern);
 }
 
-function parseSemver(version) {
+export function parseSemver(version) {
   const match = version.match(/(\d+)\.(\d+)\.(\d+)/);
 
   if (!match) {
@@ -50,7 +51,7 @@ function parseSemver(version) {
   };
 }
 
-function isEligibleUpdate(currentVersion, candidateVersion, target) {
+export function isEligibleUpdate(currentVersion, candidateVersion, target) {
   const current = parseSemver(currentVersion);
   const candidate = parseSemver(candidateVersion);
 
@@ -72,7 +73,7 @@ function isEligibleUpdate(currentVersion, candidateVersion, target) {
   );
 }
 
-function getTarget(rawArguments) {
+export function getTarget(rawArguments) {
   const targetIndex = rawArguments.indexOf('--target');
 
   if (targetIndex === -1) {
@@ -92,7 +93,7 @@ function getTarget(rawArguments) {
   return target;
 }
 
-function normalizeArguments(rawArguments) {
+export function normalizeArguments(rawArguments) {
   const normalizedArguments = [];
   const target = getTarget(rawArguments);
   const collectedDependencies = [];
@@ -145,14 +146,14 @@ function normalizeArguments(rawArguments) {
   return normalizedArguments;
 }
 
-function run(command, args) {
-  execFileSync(command, args, {
+export function run(command, args, commandRunner = execFileSync) {
+  commandRunner(command, args, {
     cwd: process.cwd(),
     stdio: 'inherit',
   });
 }
 
-function getDependencyFilters(syncpackArguments) {
+export function getDependencyFilters(syncpackArguments) {
   const filters = [];
 
   for (let index = 0; index < syncpackArguments.length; index += 1) {
@@ -168,15 +169,69 @@ function getDependencyFilters(syncpackArguments) {
   return filters;
 }
 
-function getManagedOutdatedEntries(syncpackArguments) {
+export function parseOutdatedReport(stdout) {
+  const parsed = stdout.trim();
+
+  if (!parsed) {
+    return {};
+  }
+
+  const report = JSON.parse(parsed);
+
+  if (typeof report !== 'object' || report === null || Array.isArray(report)) {
+    return {};
+  }
+
+  return report;
+}
+
+export function selectManagedOutdatedEntries(outdatedReport, syncpackArguments) {
   const dependencyMatchers = getDependencyFilters(syncpackArguments).map(createDependencyMatcher);
   const targetIndex = syncpackArguments.indexOf('--target');
   const target = targetIndex === -1 ? 'minor' : syncpackArguments[targetIndex + 1];
+  const entries = Object.entries(outdatedReport);
 
+  return entries
+    .filter(([dependencyName]) =>
+      dependencyMatchers.some((dependencyMatcher) => dependencyMatcher.test(dependencyName)),
+    )
+    .map(([dependencyName, dependencyMeta]) => {
+      const metadata = dependencyMeta;
+
+      if (
+        typeof metadata !== 'object' ||
+        metadata === null ||
+        !('current' in metadata) ||
+        !('latest' in metadata)
+      ) {
+        return null;
+      }
+
+      const currentVersion = metadata.current;
+      const latestVersion = metadata.latest;
+
+      if (typeof currentVersion !== 'string' || typeof latestVersion !== 'string') {
+        return null;
+      }
+
+      if (!isEligibleUpdate(currentVersion, latestVersion, target)) {
+        return null;
+      }
+
+      return {
+        dependencyName,
+        currentVersion,
+        latestVersion,
+      };
+    })
+    .filter((entry) => entry !== null);
+}
+
+export function getManagedOutdatedEntries(syncpackArguments, commandRunner = execFileSync) {
   let stdout = '';
 
   try {
-    stdout = execFileSync('pnpm', ['outdated', '-r', '--format', 'json'], {
+    stdout = commandRunner('pnpm', ['outdated', '-r', '--format', 'json'], {
       cwd: process.cwd(),
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -195,96 +250,94 @@ function getManagedOutdatedEntries(syncpackArguments) {
     stdout = errorStdout;
   }
 
-  const parsed = stdout.trim();
-
-  if (!parsed) {
-    return [];
-  }
-
-  const entries = Object.entries(JSON.parse(parsed));
-
-  return entries
-    .filter(([dependencyName]) =>
-      dependencyMatchers.some((dependencyMatcher) => dependencyMatcher.test(dependencyName)),
-    )
-    .map(([dependencyName, dependencyMeta]) => {
-      const metadata = dependencyMeta;
-
-      if (
-        typeof metadata !== 'object' ||
-        metadata === null ||
-        !('current' in metadata) ||
-        !('wanted' in metadata)
-      ) {
-        return null;
-      }
-
-      const currentVersion = metadata.current;
-      const wantedVersion = metadata.wanted;
-
-      if (typeof currentVersion !== 'string' || typeof wantedVersion !== 'string') {
-        return null;
-      }
-
-      if (!isEligibleUpdate(currentVersion, wantedVersion, target)) {
-        return null;
-      }
-
-      return {
-        dependencyName,
-        currentVersion,
-        wantedVersion,
-      };
-    })
-    .filter((entry) => entry !== null);
+  return selectManagedOutdatedEntries(parseOutdatedReport(stdout), syncpackArguments);
 }
 
-function printOutdatedEntries(entries, target) {
+export function printOutdatedEntries(entries, target, logger = console.log) {
   if (entries.length === 0) {
-    console.log(`✓ No eligible ${target} updates found for managed dependencies.`);
+    logger(`✓ No eligible ${target} updates found for managed dependencies.`);
     return;
   }
 
-  console.log(`Eligible ${target} updates for managed dependencies:`);
+  logger(`Eligible ${target} updates for managed dependencies:`);
 
   for (const entry of entries) {
-    console.log(`- ${entry.dependencyName}: ${entry.currentVersion} -> ${entry.wantedVersion}`);
+    logger(`- ${entry.dependencyName}: ${entry.currentVersion} -> ${entry.latestVersion}`);
   }
 }
 
-function buildPackageSpecs(entries) {
-  return entries.map((entry) => `${entry.dependencyName}@^${entry.wantedVersion}`);
+export function buildPackageSpecs(entries) {
+  return entries.map((entry) => `${entry.dependencyName}@^${entry.latestVersion}`);
 }
 
-function main() {
-  const rawArguments = process.argv.slice(2);
+export function runManagedUpgrade(entries, commandRunner = execFileSync) {
+  const packageSpecs = buildPackageSpecs(entries);
+
+  run('pnpm', ['up', '-r', '--prod', ...packageSpecs], commandRunner);
+  run('pnpm', ['up', '-r', '--dev', ...packageSpecs], commandRunner);
+}
+
+export function assertCleanGitWorktree(commandRunner = execFileSync) {
+  const stdout = commandRunner('git', ['status', '--short', '--untracked-files=all'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  if (!stdout.trim()) {
+    return;
+  }
+
+  throw new Error(
+    [
+      'Cannot run deps:upgrade with a dirty git worktree.',
+      'Commit, stash, or discard local changes first.',
+      stdout.trim(),
+    ].join('\n'),
+  );
+}
+
+export function main(
+  rawArguments = process.argv.slice(2),
+  commandRunner = execFileSync,
+  logger = console.log,
+) {
   const syncpackArguments = normalizeArguments(rawArguments);
   const targetIndex = syncpackArguments.indexOf('--target');
   const target = targetIndex === -1 ? 'minor' : syncpackArguments[targetIndex + 1];
 
   if (rawArguments.includes('--check')) {
-    const outdatedEntries = getManagedOutdatedEntries(syncpackArguments);
+    const outdatedEntries = getManagedOutdatedEntries(syncpackArguments, commandRunner);
 
-    printOutdatedEntries(outdatedEntries, target);
+    printOutdatedEntries(outdatedEntries, target, logger);
     return;
   }
-
-  const outdatedEntries = getManagedOutdatedEntries(syncpackArguments);
 
   if (rawArguments.includes('--dry-run')) {
-    printOutdatedEntries(outdatedEntries, target);
+    const outdatedEntries = getManagedOutdatedEntries(syncpackArguments, commandRunner);
+
+    printOutdatedEntries(outdatedEntries, target, logger);
     return;
   }
+
+  assertCleanGitWorktree(commandRunner);
+
+  const outdatedEntries = getManagedOutdatedEntries(syncpackArguments, commandRunner);
 
   if (outdatedEntries.length === 0) {
-    console.log(`✓ No eligible ${target} updates found for managed dependencies.`);
+    logger(`✓ No eligible ${target} updates found for managed dependencies.`);
     return;
   }
 
-  run('pnpm', ['up', '-r', ...buildPackageSpecs(outdatedEntries)]);
-  run('pnpm', ['deps:fix']);
-  run('pnpm', ['install']);
-  run('pnpm', ['validate']);
+  runManagedUpgrade(outdatedEntries, commandRunner);
+  run('pnpm', ['deps:fix'], commandRunner);
+  run('pnpm', ['install'], commandRunner);
+  run('pnpm', ['validate'], commandRunner);
 }
 
-main();
+const isDirectExecution =
+  process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1];
+
+if (isDirectExecution) {
+  main();
+}

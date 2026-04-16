@@ -6,20 +6,27 @@ import { useEffect, useState } from 'react';
 
 import { useChatEngine } from './chat-context';
 
+interface TypingStateSnapshot {
+  readonly conversationId: string;
+  readonly typingState: ConversationTypingState;
+}
+
 /**
  * Loads and subscribes to typing state for one conversation.
  */
 export function useTypingState(conversationId: string): ConversationTypingState {
   const engine = useChatEngine();
-  const [typingState, setTypingState] = useState<ConversationTypingState>(() =>
-    engine.getTypingState(conversationId),
-  );
+  const [snapshot, setSnapshot] = useState<TypingStateSnapshot>(() => ({
+    conversationId,
+    typingState: engine.getTypingState(conversationId),
+  }));
 
   useEffect(() => {
-    setTypingState(engine.getTypingState(conversationId));
-
     const syncState = (): void => {
-      setTypingState(engine.getTypingState(conversationId));
+      setSnapshot({
+        conversationId,
+        typingState: engine.getTypingState(conversationId),
+      });
     };
 
     const unsubscribeStart = engine.on('typing:start', (event) => {
@@ -44,5 +51,7 @@ export function useTypingState(conversationId: string): ConversationTypingState 
     };
   }, [conversationId, engine]);
 
-  return typingState;
+  return snapshot.conversationId === conversationId
+    ? snapshot.typingState
+    : engine.getTypingState(conversationId);
 }

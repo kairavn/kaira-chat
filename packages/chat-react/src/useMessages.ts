@@ -8,6 +8,13 @@ import { mergeMessageSets } from '@kaira/chat-core';
 
 import { useChatEngine } from './chat-context';
 
+interface MessagesSnapshot {
+  readonly conversationId: string;
+  readonly messages: ReadonlyArray<Message>;
+}
+
+const EMPTY_MESSAGES: ReadonlyArray<Message> = [];
+
 function upsertMessage(
   messages: ReadonlyArray<Message>,
   nextMessage: Message,
@@ -35,40 +42,57 @@ function mergeWithExisting(
  */
 export function useMessages(conversationId: string): ReadonlyArray<Message> {
   const engine = useChatEngine();
-  const [messages, setMessages] = useState<ReadonlyArray<Message>>([]);
+  const [snapshot, setSnapshot] = useState<MessagesSnapshot>(() => ({
+    conversationId,
+    messages: EMPTY_MESSAGES,
+  }));
 
   useEffect(() => {
-    setMessages([]);
     let isMounted = true;
+
+    const updateMessages = (
+      updater: (messages: ReadonlyArray<Message>) => ReadonlyArray<Message>,
+    ): void => {
+      setSnapshot((current) => {
+        const currentMessages =
+          current.conversationId === conversationId ? current.messages : EMPTY_MESSAGES;
+
+        return {
+          conversationId,
+          messages: updater(currentMessages),
+        };
+      });
+    };
+
     const unsubscribeReceived = engine.on('message:received', (event) => {
       if (event.message.conversationId !== conversationId) return;
-      setMessages((current) => upsertMessage(current, event.message));
+      updateMessages((current) => upsertMessage(current, event.message));
     });
 
     const unsubscribeSent = engine.on('message:sent', (event) => {
       if (event.message.conversationId !== conversationId) return;
-      setMessages((current) => upsertMessage(current, event.message));
+      updateMessages((current) => upsertMessage(current, event.message));
     });
 
     const unsubscribeUpdated = engine.on('message:updated', (event) => {
       if (event.message.conversationId !== conversationId) return;
-      setMessages((current) => upsertMessage(current, event.message));
+      updateMessages((current) => upsertMessage(current, event.message));
     });
 
     const unsubscribeDeleted = engine.on('message:deleted', (event) => {
       if (event.conversationId !== conversationId) return;
-      setMessages((current) => removeMessageById(current, event.messageId));
+      updateMessages((current) => removeMessageById(current, event.messageId));
     });
 
     const unsubscribeStreamEnd = engine.on('message:stream:end', (event) => {
       if (event.message.conversationId !== conversationId) return;
-      setMessages((current) => upsertMessage(current, event.message));
+      updateMessages((current) => upsertMessage(current, event.message));
     });
 
     const loadMessages = async (): Promise<void> => {
       const page = await engine.getMessages({ conversationId, direction: 'asc' });
       if (!isMounted) return;
-      setMessages((current) => mergeWithExisting(current, page.items));
+      updateMessages((current) => mergeWithExisting(current, page.items));
     };
 
     const unsubscribeConnection = engine.on('connection:state', (event) => {
@@ -89,5 +113,5 @@ export function useMessages(conversationId: string): ReadonlyArray<Message> {
     };
   }, [conversationId, engine]);
 
-  return messages;
+  return snapshot.conversationId === conversationId ? snapshot.messages : EMPTY_MESSAGES;
 }

@@ -6,6 +6,17 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useChatEngine } from './chat-context';
 
+interface StreamingSnapshot {
+  readonly conversationId: string;
+  readonly message: AIMessage | undefined;
+  readonly isStreaming: boolean;
+}
+
+const IDLE_STREAMING_STATE: StreamingState = {
+  message: undefined,
+  isStreaming: false,
+};
+
 /**
  * Result of the streaming message hook.
  */
@@ -24,36 +35,49 @@ export interface StreamingState {
  */
 export function useStreamingMessage(conversationId: string): StreamingState {
   const engine = useChatEngine();
-  const [message, setMessage] = useState<AIMessage | undefined>(undefined);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [snapshot, setSnapshot] = useState<StreamingSnapshot>(() => ({
+    conversationId,
+    message: undefined,
+    isStreaming: false,
+  }));
   const activeMessageIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    activeMessageIdRef.current = undefined;
-    setMessage(undefined);
-    setIsStreaming(false);
-
     const unsubStart = engine.on('message:stream:start', (event) => {
       if (event.conversationId !== conversationId) return;
       activeMessageIdRef.current = event.messageId;
-      setIsStreaming(true);
-      setMessage({
-        id: event.messageId,
+      setSnapshot({
         conversationId,
-        sender: { id: 'assistant:stream', role: 'assistant' },
-        timestamp: Date.now(),
-        status: 'sent',
-        type: 'ai',
-        content: '',
-        streamState: 'streaming',
+        isStreaming: true,
+        message: {
+          id: event.messageId,
+          conversationId,
+          sender: { id: 'assistant:stream', role: 'assistant' },
+          timestamp: Date.now(),
+          status: 'sent',
+          type: 'ai',
+          content: '',
+          streamState: 'streaming',
+        },
       });
     });
 
     const unsubChunk = engine.on('message:stream:chunk', (event) => {
       if (activeMessageIdRef.current !== event.messageId) return;
-      setMessage((current) => {
-        if (!current || current.id !== event.messageId) return current;
-        return { ...current, content: event.accumulated };
+      setSnapshot((current) => {
+        if (
+          current.conversationId !== conversationId ||
+          !current.message ||
+          current.message.id !== event.messageId
+        ) {
+          return current;
+        }
+
+        return {
+          conversationId,
+          isStreaming: current.isStreaming,
+          message: { ...current.message, content: event.accumulated },
+        };
       });
     });
 
@@ -61,16 +85,22 @@ export function useStreamingMessage(conversationId: string): StreamingState {
       if (event.message.conversationId !== conversationId) return;
       if (activeMessageIdRef.current !== event.message.id) return;
       activeMessageIdRef.current = undefined;
-      setMessage(undefined);
-      setIsStreaming(false);
+      setSnapshot({
+        conversationId,
+        message: undefined,
+        isStreaming: false,
+      });
     });
 
     const unsubError = engine.on('message:stream:error', (event) => {
       if (event.conversationId !== conversationId) return;
       if (activeMessageIdRef.current !== event.messageId) return;
       activeMessageIdRef.current = undefined;
-      setMessage(undefined);
-      setIsStreaming(false);
+      setSnapshot({
+        conversationId,
+        message: undefined,
+        isStreaming: false,
+      });
     });
 
     return () => {
@@ -82,5 +112,12 @@ export function useStreamingMessage(conversationId: string): StreamingState {
     };
   }, [conversationId, engine]);
 
-  return { message, isStreaming };
+  if (snapshot.conversationId !== conversationId) {
+    return IDLE_STREAMING_STATE;
+  }
+
+  return {
+    message: snapshot.message,
+    isStreaming: snapshot.isStreaming,
+  };
 }

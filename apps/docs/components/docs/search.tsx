@@ -5,7 +5,8 @@ import type { JSX, KeyboardEvent } from 'react';
 import Fuse from 'fuse.js';
 import { FileText, Loader2, Search as SearchIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 import { SEARCH_DATA } from '@/lib/search-data';
 import { cn } from '@/lib/utils';
@@ -19,13 +20,13 @@ interface SearchProps {
  * Includes keyboard shortcuts, loading states, and accessibility features.
  */
 export function Search({ className }: SearchProps): JSX.Element {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<typeof SEARCH_DATA>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLUListElement>(null);
+  const deferredQuery = useDeferredValue(query);
 
   // Initialize Fuse instance
   const fuse = useMemo(
@@ -37,22 +38,14 @@ export function Search({ className }: SearchProps): JSX.Element {
     [],
   );
 
-  // Search with debounce
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      if (query.trim()) {
-        const searchResults = fuse.search(query);
-        setResults(searchResults.map((result) => result.item));
-      } else {
-        setResults([]);
-      }
-      setIsLoading(false);
-      setSelectedIndex(-1);
-    }, 150);
+  const results = useMemo<typeof SEARCH_DATA>(() => {
+    if (!deferredQuery.trim()) {
+      return [];
+    }
 
-    return () => clearTimeout(timer);
-  }, [query, fuse]);
+    return fuse.search(deferredQuery).map((result) => result.item);
+  }, [deferredQuery, fuse]);
+  const isLoading = query !== deferredQuery;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -100,7 +93,7 @@ export function Search({ className }: SearchProps): JSX.Element {
         e.preventDefault();
         if (selectedIndex >= 0 && results[selectedIndex]) {
           handleClose();
-          window.location.href = results[selectedIndex].href;
+          router.push(results[selectedIndex].href);
         }
         break;
     }
@@ -109,7 +102,6 @@ export function Search({ className }: SearchProps): JSX.Element {
   const handleClose = (): void => {
     setIsOpen(false);
     setQuery('');
-    setResults([]);
     setSelectedIndex(-1);
   };
 
@@ -153,7 +145,10 @@ export function Search({ className }: SearchProps): JSX.Element {
                   ref={inputRef}
                   type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setSelectedIndex(-1);
+                  }}
                   onKeyDown={handleKeyDown}
                   placeholder="Search documentation..."
                   className="placeholder:text-muted-foreground flex-1 bg-transparent text-sm outline-none"

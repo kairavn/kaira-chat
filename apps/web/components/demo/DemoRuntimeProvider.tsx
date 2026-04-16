@@ -51,8 +51,21 @@ interface DemoRuntimeContextValue {
 }
 
 interface DemoRuntimeState {
-  readonly key: string;
   readonly runtime: DemoClientRuntime;
+}
+
+interface DemoRuntimeProviderInstanceProps {
+  readonly demoId: DemoId;
+  readonly apiBasePath: string;
+  readonly storageName: string;
+  readonly sender: Participant;
+  readonly enableStreamingBridge: boolean;
+  readonly children: ReactNode;
+}
+
+interface DemoRuntimeReadinessState {
+  readonly revision: number;
+  readonly readiness: DemoRuntimeReadiness;
 }
 
 const CONNECTING_RUNTIME_STATUS = {
@@ -105,7 +118,6 @@ function createDemoRuntimeState(
   enableStreamingBridge: boolean,
 ): DemoRuntimeState {
   return {
-    key: createRuntimeKey(demoId, apiBasePath, storageName, sender, enableStreamingBridge),
     runtime: getOrCreateDemoClientRuntime({
       demoId,
       apiBasePath,
@@ -132,45 +144,48 @@ export function DemoRuntimeProvider({
     runtimeSender,
     enableStreamingBridge,
   );
-  const [runtimeState, setRuntimeState] = useState<DemoRuntimeState>(() =>
-    createDemoRuntimeState(demoId, apiBasePath, storageName, runtimeSender, enableStreamingBridge),
+
+  return (
+    <DemoRuntimeProviderInstance
+      key={runtimeKey}
+      demoId={demoId}
+      apiBasePath={apiBasePath}
+      storageName={storageName}
+      sender={runtimeSender}
+      enableStreamingBridge={enableStreamingBridge}
+    >
+      {children}
+    </DemoRuntimeProviderInstance>
   );
-  const [readiness, setReadiness] = useState<DemoRuntimeReadiness>(CONNECTING_RUNTIME_STATUS);
+}
+
+function DemoRuntimeProviderInstance({
+  demoId,
+  apiBasePath,
+  storageName,
+  sender,
+  enableStreamingBridge,
+  children,
+}: DemoRuntimeProviderInstanceProps): JSX.Element {
   const [connectRevision, setConnectRevision] = useState(0);
+  const [runtimeState] = useState<DemoRuntimeState>(() =>
+    createDemoRuntimeState(demoId, apiBasePath, storageName, sender, enableStreamingBridge),
+  );
+  const [readinessState, setReadinessState] = useState<DemoRuntimeReadinessState>(() => ({
+    revision: 0,
+    readiness: CONNECTING_RUNTIME_STATUS,
+  }));
   const connectAttemptRef = useRef(0);
   const disconnectPromiseRef = useRef<Promise<void> | null>(null);
-
-  useEffect(() => {
-    if (runtimeState.key === runtimeKey) {
-      return;
-    }
-
-    setRuntimeState(
-      createDemoRuntimeState(
-        demoId,
-        apiBasePath,
-        storageName,
-        runtimeSender,
-        enableStreamingBridge,
-      ),
-    );
-    setReadiness(CONNECTING_RUNTIME_STATUS);
-    setConnectRevision((current) => current + 1);
-  }, [
-    apiBasePath,
-    demoId,
-    enableStreamingBridge,
-    runtimeKey,
-    runtimeSender,
-    runtimeState.key,
-    storageName,
-  ]);
+  const readiness =
+    readinessState.revision === connectRevision
+      ? readinessState.readiness
+      : CONNECTING_RUNTIME_STATUS;
 
   useEffect(() => {
     let isActive = true;
     const attemptId = connectAttemptRef.current + 1;
     connectAttemptRef.current = attemptId;
-    setReadiness(CONNECTING_RUNTIME_STATUS);
 
     const unsubscribe = runtimeState.runtime.engine.on('connection:state', (event) => {
       if (!isActive || connectAttemptRef.current !== attemptId) {
@@ -178,7 +193,10 @@ export function DemoRuntimeProvider({
       }
 
       if (event.state === 'connected' || event.state === 'reconnecting') {
-        setReadiness(READY_RUNTIME_STATUS);
+        setReadinessState({
+          revision: connectRevision,
+          readiness: READY_RUNTIME_STATUS,
+        });
       }
     });
 
@@ -199,15 +217,21 @@ export function DemoRuntimeProvider({
           return;
         }
 
-        setReadiness(READY_RUNTIME_STATUS);
+        setReadinessState({
+          revision: connectRevision,
+          readiness: READY_RUNTIME_STATUS,
+        });
       } catch (error) {
         if (!isActive || connectAttemptRef.current !== attemptId) {
           return;
         }
 
-        setReadiness({
-          status: 'error',
-          message: normalizeError(error, 'Failed to connect the demo runtime.'),
+        setReadinessState({
+          revision: connectRevision,
+          readiness: {
+            status: 'error',
+            message: normalizeError(error, 'Failed to connect the demo runtime.'),
+          },
         });
       }
     };
@@ -233,7 +257,10 @@ export function DemoRuntimeProvider({
   const runtimeContextValue: DemoRuntimeContextValue = {
     readiness,
     reconnect() {
-      setReadiness(CONNECTING_RUNTIME_STATUS);
+      setReadinessState({
+        revision: connectRevision + 1,
+        readiness: CONNECTING_RUNTIME_STATUS,
+      });
       setConnectRevision((current) => current + 1);
     },
     runtime: runtimeState.runtime,

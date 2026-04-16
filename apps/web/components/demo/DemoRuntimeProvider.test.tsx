@@ -7,13 +7,16 @@ import type {
   IStorage,
   Message,
   MessageQuery,
+  Participant,
 } from '@kaira/chat-core';
 
 import React, { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DemoRuntimeProvider } from './DemoRuntimeProvider';
+import * as demoClientRuntimeModule from '@/lib/demo/client-runtime';
+
+import { DemoRuntimeProvider, useDemoRuntimeReadiness } from './DemoRuntimeProvider';
 import { SingleConversationDemo } from './SingleConversationDemo';
 
 declare global {
@@ -153,6 +156,11 @@ function createDeferred(): {
   };
 }
 
+function DemoRuntimeReadinessProbe(): React.JSX.Element {
+  const readiness = useDemoRuntimeReadiness();
+  return <output data-testid="demo-runtime-readiness">{readiness.status}</output>;
+}
+
 describe('DemoRuntimeProvider', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
@@ -160,7 +168,118 @@ describe('DemoRuntimeProvider', () => {
       configurable: true,
       value: originalEventSource,
     });
+    demoClientRuntimeModule.clearDemoClientRuntimeCache();
     vi.restoreAllMocks();
+  });
+
+  it('reuses the demo runtime until the derived runtime key changes', async () => {
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+    const sender = {
+      id: 'media:user',
+      role: 'user',
+      displayName: 'SDK Explorer',
+    } satisfies Participant;
+    const initialStorageName = `demo-runtime-key:${crypto.randomUUID()}`;
+    const nextStorageName = `${initialStorageName}:next`;
+    const nextConnectDeferred = createDeferred();
+    const originalGetOrCreate = demoClientRuntimeModule.getOrCreateDemoClientRuntime;
+    let nextRuntimeConnectPatched = false;
+    const getOrCreateSpy = vi
+      .spyOn(demoClientRuntimeModule, 'getOrCreateDemoClientRuntime')
+      .mockImplementation((config) => {
+        const runtime = originalGetOrCreate(config);
+        if (config.storageName !== nextStorageName || nextRuntimeConnectPatched) {
+          return runtime;
+        }
+
+        const originalConnect = runtime.engine.connect.bind(runtime.engine);
+        Reflect.set(
+          runtime.engine,
+          'connect',
+          vi.fn(async () => {
+            await nextConnectDeferred.promise;
+            return originalConnect();
+          }),
+        );
+        nextRuntimeConnectPatched = true;
+        return runtime;
+      });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <DemoRuntimeProvider
+          demoId="media"
+          apiBasePath="/api/demos/media"
+          storageName={initialStorageName}
+          sender={sender}
+        >
+          <DemoRuntimeReadinessProbe />
+        </DemoRuntimeProvider>,
+      );
+    });
+
+    expect(getOrCreateSpy).toHaveBeenCalledTimes(1);
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('[data-testid="demo-runtime-readiness"]')?.textContent).toBe(
+        'ready',
+      );
+    });
+
+    await act(async () => {
+      root.render(
+        <DemoRuntimeProvider
+          demoId="media"
+          apiBasePath="/api/demos/media"
+          storageName={initialStorageName}
+          sender={sender}
+        >
+          <DemoRuntimeReadinessProbe />
+        </DemoRuntimeProvider>,
+      );
+    });
+
+    expect(getOrCreateSpy).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('[data-testid="demo-runtime-readiness"]')?.textContent).toBe(
+      'ready',
+    );
+
+    await act(async () => {
+      root.render(
+        <DemoRuntimeProvider
+          demoId="media"
+          apiBasePath="/api/demos/media"
+          storageName={nextStorageName}
+          sender={sender}
+        >
+          <DemoRuntimeReadinessProbe />
+        </DemoRuntimeProvider>,
+      );
+    });
+
+    expect(getOrCreateSpy).toHaveBeenCalledTimes(2);
+    expect(container.querySelector('[data-testid="demo-runtime-readiness"]')?.textContent).toBe(
+      'connecting',
+    );
+
+    await act(async () => {
+      nextConnectDeferred.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('[data-testid="demo-runtime-readiness"]')?.textContent).toBe(
+        'ready',
+      );
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
   });
 
   it('mounts a demo child without leaving the composer stuck in connecting state', async () => {
