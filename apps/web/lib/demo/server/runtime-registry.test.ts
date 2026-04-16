@@ -203,6 +203,43 @@ describe('local demo runtimes', () => {
     ).toBe(true);
   });
 
+  it('returns a WebSocket-specific assistant reply for the websocket demo', async () => {
+    const runtime = getDemoRuntime('websocket');
+    const requestContext = createRequestContext(`websocket-${crypto.randomUUID()}`);
+    const bootstrap = await runtime.ensureConversation(requestContext);
+    const beforeMessages = await runtime.getMessages(bootstrap.conversationId, requestContext);
+
+    await runtime.sendMessage(
+      bootstrap.conversationId,
+      'Explain the WebSocket transport path in this demo.',
+      undefined,
+      requestContext,
+    );
+
+    const messages = await waitForMessages(
+      () => runtime.getMessages(bootstrap.conversationId, requestContext),
+      (items) =>
+        items.length > beforeMessages.length &&
+        items.some(
+          (message) =>
+            message.type === 'text' &&
+            message.content.includes(
+              'keeps message and typing traffic on the demo-only WebSocket bridge',
+            ),
+        ),
+    );
+
+    expect(
+      messages.some(
+        (message) =>
+          message.type === 'text' &&
+          message.content.includes(
+            'keeps message and typing traffic on the demo-only WebSocket bridge',
+          ),
+      ),
+    ).toBe(true);
+  });
+
   it('isolates local demo state between different session ids', async () => {
     const runtime = getDemoRuntime('next-backend');
     const sessionA = createRequestContext(`next-backend-a-${crypto.randomUUID()}`);

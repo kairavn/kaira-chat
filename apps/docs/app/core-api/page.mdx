@@ -52,12 +52,12 @@ Built-in `MessageContent` variants include:
 - `location`
 - `system`
 - `ai`
-- `tool_call`
-- `tool_result`
 - `custom`
 
 `audio`, `video`, and `location` are first-class core message types.
 `text-stream` remains a rendering concern built on the existing `ai` stream lifecycle.
+Provider-specific transcript payloads should use `custom`; built-in SDK defaults do not include
+tool invocation transcript semantics.
 
 ## Events
 

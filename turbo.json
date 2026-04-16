@@ -7,6 +7,7 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": [
         "NODE_ENV",
+        "NEXT_RUNTIME",
         "API_URL",
         "X_API_KEY",
         "X_API_ID",

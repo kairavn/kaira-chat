@@ -12,7 +12,7 @@ export interface SearchResult {
 
 /**
  * Auto-generated search index from MDX page files.
- * Updated: 2026-04-13
+ * Updated: 2026-04-16
  */
 export const SEARCH_DATA: SearchResult[] = [
   {
@@ -94,7 +94,8 @@ export const SEARCH_DATA: SearchResult[] = [
   {
     title: 'Transport API',
     href: '/transport/',
-    description: 'ITransport abstracts realtime communication from ChatEngine.',
+    description:
+      'ITransport abstracts realtime communication from ChatEngine, and the repo ships first-party polling and WebSocket adapters on top of that contract.',
   },
   {
     title: 'UI Components',

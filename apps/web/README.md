@@ -69,6 +69,7 @@ pnpm dev --filter=web
 | `/streaming`    | Stream lifecycle-focused demo                                |
 | `/media`        | Built-in renderer coverage with exact media quick actions    |
 | `/persistence`  | IndexedDB persistence and conversation switching             |
+| `/websocket`    | Local-only WebSocket transport showcase with reconnect drill |
 
 ## Architecture overview
 
@@ -78,6 +79,8 @@ pnpm dev --filter=web
   `apps/web/components/demo/DemoRuntimeProvider.tsx`.
 - The generalized backend registry lives in
   `apps/web/lib/demo/server/runtime-registry.ts`.
+- The local-only sibling-port WebSocket bridge lives in
+  `apps/web/lib/demo/server/demo-websocket-server.ts`.
 - Dynamic demo routes use `app/api/demos/[demoId]/*`.
 - Legacy `/api/chat/*` routes remain as DIT compatibility wrappers.
 
@@ -87,6 +90,11 @@ deterministic quick actions so specific backend and renderer paths can be
 verified without relying on prompt parsing alone. Stream-capable demos still
 bridge `message:stream:*` events into the browser through the demo SSE route,
 but the final assistant reply also lands through the normal message transport.
+The `/websocket` route stays additive and local-only: it bootstraps the
+conversation over the existing HTTP demo routes, then uses a demo-only
+WebSocket server on `localhost:3021` for message and typing traffic so connect,
+send, receive, and reconnect behavior can be reviewed without changing the
+polling-first demos.
 
 ## Project structure
 
@@ -101,13 +109,14 @@ apps/web/
 
 ## Related packages
 
-| Package                    | Role                             |
-| -------------------------- | -------------------------------- |
-| `@kaira/chat-core`         | Core chat engine and event types |
-| `@kaira/chat-react`        | React hooks (`useChat`, etc.)    |
-| `@kaira/chat-ui`           | Pre-built UI components          |
-| `@kaira/chat-devtools`     | Debug overlay (dev mode only)    |
-| `@kaira/chat-provider-dit` | DIT transport adapter            |
+| Package                           | Role                             |
+| --------------------------------- | -------------------------------- |
+| `@kaira/chat-core`                | Core chat engine and event types |
+| `@kaira/chat-react`               | React hooks (`useChat`, etc.)    |
+| `@kaira/chat-ui`                  | Pre-built UI components          |
+| `@kaira/chat-devtools`            | Debug overlay (dev mode only)    |
+| `@kaira/chat-transport-websocket` | Generic WebSocket transport      |
+| `@kaira/chat-provider-dit`        | DIT transport adapter            |
 
 ## Focused regression test
 

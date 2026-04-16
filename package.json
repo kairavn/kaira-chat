@@ -42,7 +42,8 @@
     "typescript": "^5.9.3"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged"
+    "pre-commit": "pnpm lint-staged",
+    "pre-push": "pnpm validate"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json,md,css,scss,html,yml,yaml}": "prettier --write"

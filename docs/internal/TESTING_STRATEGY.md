@@ -4,16 +4,17 @@ This file describes the current automated coverage and the practical validation 
 
 ## Current coverage by surface
 
-| Surface                         | Current coverage                                  | Evidence                                                                                          |
-| ------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `@kaira/chat-core`              | strong unit coverage                              | `packages/chat-core/src/**/*.test.ts`, `packages/chat-core/vitest.config.ts`                      |
-| `@kaira/chat-transport-polling` | targeted behavioral coverage                      | `packages/chat-transport-polling/src/polling-transport.test.ts`                                   |
-| `@kaira/chat-provider-dit`      | targeted adapter and parser coverage              | `packages/chat-provider-dit/src/dit-transport.test.ts`                                            |
-| `@kaira/chat-react`             | focused hook and provider coverage                | `packages/chat-react/src/chat-context.test.tsx`, `packages/chat-react/src/useChatHooks.test.tsx`  |
-| `@kaira/chat-ui`                | focused renderer and composer coverage            | `packages/chat-ui/src/default-renderers.test.tsx`, `packages/chat-ui/src/MessageInput.test.tsx`   |
-| `@kaira/chat-devtools`          | focused runtime inspection coverage               | `packages/chat-devtools/src/useChatDevTools.test.tsx`                                             |
-| `apps/web`                      | targeted route, runtime, and integration coverage | `apps/web/app/api/**/*.test.ts`, `apps/web/lib/**/*.test.ts`, `apps/web/components/**/*.test.tsx` |
-| `apps/docs`                     | lightweight search-integrity coverage             | `apps/docs/lib/generate-search-data.test.ts`                                                      |
+| Surface                           | Current coverage                                  | Evidence                                                                                          |
+| --------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `@kaira/chat-core`                | strong unit coverage                              | `packages/chat-core/src/**/*.test.ts`, `packages/chat-core/vitest.config.ts`                      |
+| `@kaira/chat-transport-polling`   | targeted behavioral coverage                      | `packages/chat-transport-polling/src/polling-transport.test.ts`                                   |
+| `@kaira/chat-transport-websocket` | targeted behavioral coverage                      | `packages/chat-transport-websocket/src/websocket-transport.test.ts`                               |
+| `@kaira/chat-provider-dit`        | targeted adapter and parser coverage              | `packages/chat-provider-dit/src/dit-transport.test.ts`                                            |
+| `@kaira/chat-react`               | focused hook and provider coverage                | `packages/chat-react/src/chat-context.test.tsx`, `packages/chat-react/src/useChatHooks.test.tsx`  |
+| `@kaira/chat-ui`                  | focused renderer and composer coverage            | `packages/chat-ui/src/default-renderers.test.tsx`, `packages/chat-ui/src/MessageInput.test.tsx`   |
+| `@kaira/chat-devtools`            | focused runtime inspection coverage               | `packages/chat-devtools/src/useChatDevTools.test.tsx`                                             |
+| `apps/web`                        | targeted route, runtime, and integration coverage | `apps/web/app/api/**/*.test.ts`, `apps/web/lib/**/*.test.ts`, `apps/web/components/**/*.test.tsx` |
+| `apps/docs`                       | lightweight search-integrity coverage             | `apps/docs/lib/generate-search-data.test.ts`                                                      |
 
 ## Weakly tested or untested areas
 
@@ -43,7 +44,7 @@ Pay special attention to:
 
 ### Transport or adapter changes
 
-When changing `packages/chat-transport-polling` or `packages/chat-provider-dit`:
+When changing `packages/chat-transport-polling`, `packages/chat-transport-websocket`, or `packages/chat-provider-dit`:
 
 - run `pnpm test`
 - run `pnpm build`

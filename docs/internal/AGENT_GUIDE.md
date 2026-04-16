@@ -15,7 +15,7 @@ Manual docs can drift. Treat `apps/docs` and README files as secondary evidence 
 
 ## Workspace boundaries
 
-- Public SDK surface: `packages/chat-core`, `packages/chat-react`, `packages/chat-ui`, `packages/chat-devtools`, `packages/chat-storage-indexeddb`, `packages/chat-transport-polling`, `packages/chat-provider-dit`
+- Public SDK surface: `packages/chat-core`, `packages/chat-react`, `packages/chat-ui`, `packages/chat-devtools`, `packages/chat-storage-indexeddb`, `packages/chat-transport-polling`, `packages/chat-transport-websocket`, `packages/chat-provider-dit`
 - Internal demo app: `apps/web`
 - Consumer docs app: `apps/docs`
 - Tooling and release workflow: root `package.json`, `turbo.json`, `.syncpackrc.json`, `.changeset/`, `.github/workflows/`, `packages/eslint-config`, `packages/typescript-config`
@@ -70,7 +70,8 @@ Use extra caution with these manually maintained or generated-adjacent files:
 ## Common pitfalls
 
 - `@kaira/chat-provider-dit` is a concrete transport adapter. It is not an `IProvider` implementation.
-- The demo browser runtime is demo-scoped. Polling remains the primary browser transport, and the local showcase demos add SSE only for stream lifecycle fan-out.
+- Built-in tool invocation transcript semantics are out of scope for the SDK. Use `custom` messages and consumer-owned renderers for provider-specific payloads.
+- The demo browser runtime is demo-scoped. Polling remains the primary browser transport for most demos, and the local showcase demos add SSE only for stream lifecycle fan-out. The `/websocket` demo is the exception: it uses `WebSocketTransport` from `@kaira/chat-transport-websocket` against a sibling-port bridge instead of polling for message and typing traffic.
 - Streaming helper methods in `ChatEngine` are exercised by the local demo runtime, while the DIT-backed path remains polling-first.
 - `IProvider` remains a contract-only surface. `IStorage` is still a core contract, but the repo now ships a first-party browser adapter in `@kaira/chat-storage-indexeddb`.
 - The docs app is authored MDX plus generated search data. It is not generated from package exports or tests.

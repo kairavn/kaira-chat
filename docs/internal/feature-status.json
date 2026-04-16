@@ -1,7 +1,7 @@
 {
   "meta": {
     "canonicalVersion": 1,
-    "generatedAt": "2026-04-09",
+    "generatedAt": "2026-04-16",
     "sourceOfTruth": "docs/internal/feature-status.json",
     "generatedOutputs": [
       "docs/internal/IMPLEMENTATION_STATUS.md",
@@ -232,21 +232,21 @@
       "roadmapCandidate": true
     },
     {
-      "id": "other-first-party-transports",
+      "id": "websocket-transport",
       "category": "Concrete Adapters",
-      "feature": "Other first-party transport packages",
+      "feature": "WebSocket transport",
       "surfaceType": "public-sdk",
-      "ownerArea": "monorepo",
+      "ownerArea": "@kaira/chat-transport-websocket",
       "publicSurface": true,
-      "status": "missing",
-      "backing": "none",
+      "status": "implemented",
+      "backing": "concrete",
       "evidence": [
-        "pnpm-workspace.yaml",
-        "packages/chat-transport-polling/package.json",
-        "packages/chat-provider-dit/package.json"
+        "packages/chat-transport-websocket/src/websocket-transport.ts",
+        "packages/chat-transport-websocket/src/index.ts",
+        "packages/chat-transport-websocket/src/websocket-transport.test.ts"
       ],
-      "notes": "There are no first-party WebSocket, SSE, or other transport packages beyond polling and the DIT-specific adapter.",
-      "roadmapCandidate": true
+      "notes": "A generic first-party WebSocket ITransport implementation now ships with configurable frame parsing, outbound serialization, connection lifecycle handling, and reconnect behavior.",
+      "roadmapCandidate": false
     },
     {
       "id": "react-provider-hooks",
@@ -306,15 +306,15 @@
       "surfaceType": "public-sdk",
       "ownerArea": "@kaira/chat-ui",
       "publicSurface": true,
-      "status": "partial",
+      "status": "implemented",
       "backing": "concrete",
       "evidence": [
         "packages/chat-ui/src/default-renderers.tsx",
         "packages/chat-ui/src/default-renderers.test.tsx",
         "packages/chat-core/src/types/message.ts"
       ],
-      "notes": "Built-in renderers now cover text, ai text-stream, image, audio, video, file, location, and system messages with reusable exported content components. Tool-call, tool-result, and custom message defaults are still not present.",
-      "roadmapCandidate": true
+      "notes": "Built-in renderers cover the SDK's first-class message types: text, ai text-stream, image, audio, video, file, location, and system. Provider-specific transcript payloads remain out of scope for default renderer support and should use custom message renderers.",
+      "roadmapCandidate": false
     },
     {
       "id": "typing-indicator-ui",
@@ -433,6 +433,23 @@
         "apps/web/lib/demo/server/runtime-registry.ts"
       ],
       "notes": "The generalized demo events route still supports polling for messages and typing, and local stream-capable demos now consume its SSE branch through an EventSource bridge.",
+      "roadmapCandidate": false
+    },
+    {
+      "id": "demo-websocket-showcase",
+      "category": "Demo App",
+      "feature": "WebSocket demo showcase",
+      "surfaceType": "demo-app",
+      "ownerArea": "apps/web",
+      "publicSurface": false,
+      "status": "implemented",
+      "backing": "concrete",
+      "evidence": [
+        "apps/web/app/websocket/page.tsx",
+        "apps/web/lib/demo/server/demo-websocket-server.ts",
+        "apps/web/components/demo/WebSocketDemoHelperPanel.tsx"
+      ],
+      "notes": "apps/web now includes a local-only WebSocket showcase that bootstraps the conversation over the existing HTTP demo routes, then drives message and typing traffic through the first-party WebSocket transport with a manual reconnect control.",
       "roadmapCandidate": false
     },
     {
@@ -620,11 +637,11 @@
       "status": "implemented",
       "backing": "concrete",
       "evidence": [
-        "apps/web/app/api/chat/events/route.test.ts",
-        "apps/web/app/api/demos/[demoId]/events/route.test.ts",
+        "apps/web/lib/demo/server/demo-websocket-server.test.ts",
+        "apps/web/app/api/demos/websocket/control/route.test.ts",
         "apps/web/config/demo-registry.test.ts"
       ],
-      "notes": "apps/web now has focused Vitest coverage for the event broker, the legacy DIT compatibility route, the generalized demo events route, and the central demo registry.",
+      "notes": "apps/web now has focused Vitest coverage for the WebSocket bridge helpers, the demo reconnect control route, and the central demo registry alongside the existing route and runtime tests.",
       "roadmapCandidate": false
     },
     {

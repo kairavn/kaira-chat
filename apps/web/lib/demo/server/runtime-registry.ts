@@ -245,20 +245,6 @@ function buildMessage(
         streamState: 'complete',
         ...(content.aiMetadata ? { aiMetadata: content.aiMetadata } : {}),
       };
-    case 'tool_call':
-      return {
-        ...baseMessage,
-        type: 'tool_call',
-        toolCalls: content.toolCalls,
-      };
-    case 'tool_result':
-      return {
-        ...baseMessage,
-        type: 'tool_result',
-        toolCallId: content.toolCallId,
-        result: content.result,
-        isError: content.isError,
-      };
     case 'custom':
       return {
         ...baseMessage,
@@ -504,6 +490,28 @@ function getNextBackendStreamContent(actionId: NextBackendActionId | null, promp
   }
 
   return `Local Next.js backend received: "${prompt}". The server owns the ChatEngine, emits assistant typing, and now also completes the final AI message over the normal message transport path.`;
+}
+
+function getWebSocketDemoReply(prompt: string): string {
+  const normalizedPrompt = prompt.trim().toLowerCase();
+
+  if (
+    normalizedPrompt.includes('reconnect') ||
+    normalizedPrompt.includes('disconnect') ||
+    normalizedPrompt.includes('retry')
+  ) {
+    return 'Use the helper panel to drop the active socket. The browser transport should switch to reconnecting, reconnect automatically, and continue receiving typing plus final assistant messages over the same local WebSocket bridge.';
+  }
+
+  if (normalizedPrompt.includes('typing')) {
+    return 'Typing updates in this demo are transport events too. The assistant typing indicator is emitted by the server-owned ChatEngine and delivered over the WebSocket connection before the final assistant message arrives.';
+  }
+
+  if (normalizedPrompt.includes('transport') || normalizedPrompt.includes('socket')) {
+    return 'This demo bootstraps the conversation over the existing HTTP route handlers, then keeps message and typing traffic on the demo-only WebSocket bridge so you can verify connect, send, receive, and reconnect behavior without touching the polling-first demos.';
+  }
+
+  return `The local WebSocket demo received: "${prompt}". Messages and typing stay on the socket after the initial HTTP bootstrap, while the server-owned ChatEngine still manages the actual conversation state.`;
 }
 
 export function buildMediaDemoContent(actionId: MediaActionId): MessageContent {
@@ -948,6 +956,13 @@ class LocalDemoRuntime implements DemoServerRuntime {
           content:
             'Use the quick actions or send “normal”, “long”, or “error” to trigger different stream lifecycle paths.',
         });
+      } else if (this.demoId === 'websocket') {
+        await emitRemoteMessage(context, conversation.id, {
+          type: 'system',
+          eventKind: 'custom',
+          content:
+            'This demo bootstraps over the existing HTTP routes, then moves message and typing traffic onto a local WebSocket bridge so reconnect behavior is easy to verify.',
+        });
       } else {
         await emitRemoteMessage(context, conversation.id, {
           type: 'text',
@@ -1024,6 +1039,17 @@ class LocalDemoRuntime implements DemoServerRuntime {
         return;
       }
 
+      if (this.demoId === 'websocket') {
+        await emitRemoteTyping(context, conversationId, 'start');
+        await sleep(250);
+        await emitRemoteTyping(context, conversationId, 'stop');
+        await emitRemoteMessage(context, conversationId, {
+          type: 'text',
+          content: getWebSocketDemoReply(prompt),
+        });
+        return;
+      }
+
       await emitRemoteMessage(context, conversationId, {
         type: 'text',
         content: `Acknowledged: ${prompt}`,
@@ -1046,6 +1072,7 @@ const DEMO_RUNTIMES: Record<DemoId, DemoServerRuntime> = {
   streaming: new LocalDemoRuntime('streaming'),
   media: new LocalDemoRuntime('media'),
   persistence: new LocalDemoRuntime('persistence'),
+  websocket: new LocalDemoRuntime('websocket'),
 };
 
 export function getDemoRuntime(demoId: DemoId): DemoServerRuntime {

@@ -87,18 +87,6 @@ const validMessages: ReadonlyArray<Message> = [
   },
   {
     ...baseMessage,
-    type: 'tool_call',
-    toolCalls: [{ id: 'tc1', name: 'search', arguments: { query: 'hello' } }],
-  },
-  {
-    ...baseMessage,
-    type: 'tool_result',
-    toolCallId: 'tc1',
-    result: { ok: true },
-    isError: false,
-  },
-  {
-    ...baseMessage,
     type: 'custom',
     customType: 'demo',
     payload: { hello: 'world' },

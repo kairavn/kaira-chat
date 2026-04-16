@@ -16,6 +16,7 @@
       "@kaira/chat-devtools": ["../../packages/chat-devtools/src/index.ts"],
       "@kaira/chat-storage-indexeddb": ["../../packages/chat-storage-indexeddb/src/index.ts"],
       "@kaira/chat-transport-polling": ["../../packages/chat-transport-polling/src/index.ts"],
+      "@kaira/chat-transport-websocket": ["../../packages/chat-transport-websocket/src/index.ts"],
       "@kaira/chat-provider-dit": ["../../packages/chat-provider-dit/src/index.ts"]
     }
   },

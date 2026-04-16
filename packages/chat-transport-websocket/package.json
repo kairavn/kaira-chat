@@ -1,0 +1,60 @@
+{
+  "name": "@kaira/chat-transport-websocket",
+  "version": "0.1.0",
+  "description": "WebSocket transport implementation for Kaira Chat SDK",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kaira/chat-core.git",
+    "directory": "packages/chat-transport-websocket"
+  },
+  "license": "MIT",
+  "scripts": {
+    "prepack": "pnpm build",
+    "build": "tsup --config tsup.config.ts",
+    "dev": "tsup --config tsup.config.ts --watch",
+    "check-types": "tsc --project tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@kaira/chat-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@types/node": "^22.19.17",
+    "eslint": "^9.39.4",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "chat",
+    "chat-sdk",
+    "websocket",
+    "transport",
+    "chat-engine",
+    "streaming-chat"
+  ]
+}

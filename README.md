@@ -10,6 +10,7 @@ TypeScript and React monorepo for the Kaira chat SDK, an internal demo app, and 
 - `@kaira/chat-devtools` - runtime inspection panel for React integrations.
 - `@kaira/chat-storage-indexeddb` - browser-first IndexedDB `IStorage` adapter with in-memory fallback.
 - `@kaira/chat-transport-polling` - concrete polling-based `ITransport`.
+- `@kaira/chat-transport-websocket` - concrete WebSocket-based `ITransport`.
 - `@kaira/chat-provider-dit` - DIT-specific transport adapter built on polling.
 
 ## Workspace apps

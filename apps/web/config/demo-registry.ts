@@ -1,4 +1,10 @@
-export type DemoId = 'dit-modive' | 'next-backend' | 'streaming' | 'media' | 'persistence';
+export type DemoId =
+  | 'dit-modive'
+  | 'next-backend'
+  | 'streaming'
+  | 'media'
+  | 'persistence'
+  | 'websocket';
 
 export interface DemoDefinition {
   readonly id: DemoId;
@@ -60,6 +66,16 @@ export const DEMO_DEFINITIONS: ReadonlyArray<DemoDefinition> = [
     badges: ['IndexedDB', 'Conversation switching', 'Reload verification'],
     summary:
       'Loads multiple demo conversations, mirrors them into the browser storage adapter, and makes it easy to verify persisted history across reloads.',
+    kind: 'local',
+  },
+  {
+    id: 'websocket',
+    route: '/websocket',
+    title: 'WebSocket Transport Demo',
+    description: 'A local WebSocket-backed showcase layered onto the existing demo runtime.',
+    badges: ['WebSocket transport', 'Reconnect', 'Typing', 'Local only'],
+    summary:
+      'Bootstraps over the existing HTTP demo routes, then switches message and typing traffic to a demo-only WebSocket bridge so the transport can be verified manually.',
     kind: 'local',
   },
 ] as const;

@@ -8,8 +8,6 @@ import type {
   Message,
   SystemMessage,
   TextMessage,
-  ToolCallMessage,
-  ToolResultMessage,
   VideoMessage,
 } from '../types/message.js';
 
@@ -51,16 +49,6 @@ export function isSystemMessage(msg: Message): msg is SystemMessage {
 /** Narrows a Message to AIMessage. */
 export function isAIMessage(msg: Message): msg is AIMessage {
   return msg.type === 'ai';
-}
-
-/** Narrows a Message to ToolCallMessage. */
-export function isToolCallMessage(msg: Message): msg is ToolCallMessage {
-  return msg.type === 'tool_call';
-}
-
-/** Narrows a Message to ToolResultMessage. */
-export function isToolResultMessage(msg: Message): msg is ToolResultMessage {
-  return msg.type === 'tool_result';
 }
 
 /** Narrows a Message to CustomMessage. */

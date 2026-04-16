@@ -22,9 +22,6 @@ export type {
   SystemEventKind,
   SystemMessage,
   TextMessage,
-  ToolCall,
-  ToolCallMessage,
-  ToolResultMessage,
   VideoMessage,
 } from './types/message.js';
 
@@ -116,8 +113,6 @@ export {
   isLocationMessage,
   isSystemMessage,
   isTextMessage,
-  isToolCallMessage,
-  isToolResultMessage,
   isVideoMessage,
 } from './utils/assert.js';
 export { generateId } from './utils/id.js';

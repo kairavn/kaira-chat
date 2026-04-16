@@ -109,3 +109,8 @@ export default function RootLayout(props: { readonly children: React.ReactNode }
   );
 }
 ```
+
+If your backend exposes a persistent realtime channel, keep this quick start as
+the baseline shape and swap in `@kaira/chat-transport-websocket` only for the
+transport layer. The WebSocket-specific framing, reconnect behavior, and
+consumer caveats are documented in [Transport API](/transport).

@@ -4,6 +4,7 @@ import type {
   ChatError,
   ChatSerializer,
   Conversation,
+  ITransport,
   Message,
   Participant,
   TransportEvent,
@@ -15,8 +16,10 @@ import type { DemoConversationBootstrap, DemoPollEventsResponse } from '@/lib/de
 import { ChatEngine, createChatError, ChatSerializer as Serializer } from '@kaira/chat-core';
 import { IndexedDBStorage } from '@kaira/chat-storage-indexeddb';
 import { PollingTransport } from '@kaira/chat-transport-polling';
+import { WebSocketTransport } from '@kaira/chat-transport-websocket';
 
 import { DEMO_DEFINITIONS } from '@/config/demo-registry';
+import { buildDemoWebSocketUrl, DEMO_WEBSOCKET_DEMO_ID } from '@/lib/demo/websocket-config';
 
 interface DemoClientRuntimeConfig {
   readonly demoId: DemoId;
@@ -253,6 +256,24 @@ function parseTransportEvent(value: unknown): TransportEvent<'message' | 'typing
   }
 
   throw new Error('Unsupported transport event type');
+}
+
+function parseWebSocketFrame(
+  value: unknown,
+):
+  | TransportEvent<'message' | 'typing'>
+  | ReadonlyArray<TransportEvent<'message' | 'typing'>>
+  | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const parsed: unknown = JSON.parse(value);
+  if (Array.isArray(parsed)) {
+    return parsed.map((item) => parseTransportEvent(item));
+  }
+
+  return parseTransportEvent(parsed);
 }
 
 function parseDemoPollEventsResponse(value: unknown): DemoPollEventsResponse {
@@ -493,25 +514,57 @@ export function getOrCreateDemoClientRuntime(config: DemoClientRuntimeConfig): D
     }
   }
 
-  const transport = new PollingTransport<
+  function createTransport(): ITransport<
     TransportEvent<'message' | 'typing'>,
     TransportEvent<'message' | 'typing'>
-  >({
-    capabilities: {
-      typing: true,
-    },
-    intervalMs: config.pollIntervalMs ?? 1800,
-    pollAfterSend: true,
-    poll: pollEvents,
-    send: async (event) => {
-      if (event.type === 'typing') {
-        await sendTyping(event);
-        return;
-      }
+  > {
+    if (config.demoId === DEMO_WEBSOCKET_DEMO_ID) {
+      const hostname = typeof window === 'undefined' ? '127.0.0.1' : window.location.hostname;
+      const protocol = typeof window === 'undefined' ? 'http:' : window.location.protocol;
 
-      await sendMessage(event);
-    },
-  });
+      return new WebSocketTransport<
+        TransportEvent<'message' | 'typing'>,
+        TransportEvent<'message' | 'typing'>
+      >({
+        url: buildDemoWebSocketUrl({
+          demoId: DEMO_WEBSOCKET_DEMO_ID,
+          hostname,
+          protocol,
+          sessionId,
+        }),
+        capabilities: {
+          typing: true,
+        },
+        reconnectDelayMs: 750,
+        maxReconnectDelayMs: 4_000,
+        backoffMultiplier: 2,
+        jitterRatio: 0,
+        deserialize: parseWebSocketFrame,
+      });
+    }
+
+    return new PollingTransport<
+      TransportEvent<'message' | 'typing'>,
+      TransportEvent<'message' | 'typing'>
+    >({
+      capabilities: {
+        typing: true,
+      },
+      intervalMs: config.pollIntervalMs ?? 1800,
+      pollAfterSend: true,
+      poll: pollEvents,
+      send: async (event) => {
+        if (event.type === 'typing') {
+          await sendTyping(event);
+          return;
+        }
+
+        await sendMessage(event);
+      },
+    });
+  }
+
+  const transport = createTransport();
 
   const engine = new ChatEngine({
     storage,

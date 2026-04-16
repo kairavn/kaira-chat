@@ -22,6 +22,7 @@ npm install @kaira/chat-ui @kaira/chat-react @kaira/chat-core react react-dom
 - `system`
 
 Unknown types and unregistered valid types fall back to `UnsupportedMessageContent`.
+`custom` messages intentionally require consumer-owned renderers.
 
 ## Quick Start
 

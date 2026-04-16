@@ -307,22 +307,6 @@ function createOutgoingMessage(
         ...(content.aiMetadata ? { aiMetadata: content.aiMetadata } : {}),
         ...(metadata ? { metadata } : {}),
       };
-    case 'tool_call':
-      return {
-        ...baseFields,
-        type: 'tool_call',
-        toolCalls: content.toolCalls,
-        ...(metadata ? { metadata } : {}),
-      };
-    case 'tool_result':
-      return {
-        ...baseFields,
-        type: 'tool_result',
-        toolCallId: content.toolCallId,
-        result: content.result,
-        isError: content.isError,
-        ...(metadata ? { metadata } : {}),
-      };
     case 'custom':
       return {
         ...baseFields,
@@ -443,24 +427,6 @@ function applyMessageContentUpdate(existing: Message, update: Partial<MessageCon
           ? { content: update.content }
           : {}),
         ...('aiMetadata' in update ? { aiMetadata: update.aiMetadata } : {}),
-      };
-    case 'tool_call':
-      return {
-        ...existing,
-        ...metadataPatch,
-        ...('toolCalls' in update ? { toolCalls: update.toolCalls } : {}),
-      };
-    case 'tool_result':
-      return {
-        ...existing,
-        ...metadataPatch,
-        ...('toolCallId' in update && typeof update.toolCallId === 'string'
-          ? { toolCallId: update.toolCallId }
-          : {}),
-        ...('result' in update ? { result: update.result } : {}),
-        ...('isError' in update && typeof update.isError === 'boolean'
-          ? { isError: update.isError }
-          : {}),
       };
     case 'custom':
       return {
@@ -1174,8 +1140,6 @@ export class ChatEngine implements IChatEngine {
     this.messageRegistry.register({ type: 'location' });
     this.messageRegistry.register({ type: 'system' });
     this.messageRegistry.register({ type: 'ai' });
-    this.messageRegistry.register({ type: 'tool_call' });
-    this.messageRegistry.register({ type: 'tool_result' });
     this.messageRegistry.register({ type: 'custom' });
   }
 

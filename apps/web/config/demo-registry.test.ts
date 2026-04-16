@@ -11,6 +11,7 @@ describe('demo registry', () => {
     expect(routes).toContain('/streaming');
     expect(routes).toContain('/media');
     expect(routes).toContain('/persistence');
+    expect(routes).toContain('/websocket');
     expect(routes).not.toContain('/states');
     expect(new Set(routes).size).toBe(routes.length);
   });

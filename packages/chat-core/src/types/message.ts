@@ -11,8 +11,6 @@ export type MessageType =
   | 'location'
   | 'system'
   | 'ai'
-  | 'tool_call'
-  | 'tool_result'
   | 'custom';
 
 /** Delivery status of a message. */
@@ -43,15 +41,8 @@ export interface AIMetadata {
     readonly total: number;
   };
   readonly latencyMs?: number;
-  readonly finishReason?: 'stop' | 'length' | 'tool_calls' | 'error';
+  readonly finishReason?: 'stop' | 'length' | 'error';
   readonly metadata?: Record<string, unknown>;
-}
-
-/** A single tool invocation requested by an AI model. */
-export interface ToolCall {
-  readonly id: string;
-  readonly name: string;
-  readonly arguments: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,18 +125,6 @@ export interface AIMessage extends BaseMessage {
   readonly aiMetadata?: AIMetadata;
 }
 
-export interface ToolCallMessage extends BaseMessage {
-  readonly type: 'tool_call';
-  readonly toolCalls: ReadonlyArray<ToolCall>;
-}
-
-export interface ToolResultMessage extends BaseMessage {
-  readonly type: 'tool_result';
-  readonly toolCallId: string;
-  readonly result: unknown;
-  readonly isError: boolean;
-}
-
 export interface CustomMessage extends BaseMessage {
   readonly type: 'custom';
   readonly customType: string;
@@ -162,8 +141,6 @@ export type Message =
   | LocationMessage
   | SystemMessage
   | AIMessage
-  | ToolCallMessage
-  | ToolResultMessage
   | CustomMessage;
 
 // ---------------------------------------------------------------------------
@@ -225,16 +202,6 @@ export type MessageContent =
       readonly type: 'ai';
       readonly content: string;
       readonly aiMetadata?: AIMetadata;
-    } & BaseMessageContent)
-  | ({
-      readonly type: 'tool_call';
-      readonly toolCalls: ReadonlyArray<ToolCall>;
-    } & BaseMessageContent)
-  | ({
-      readonly type: 'tool_result';
-      readonly toolCallId: string;
-      readonly result: unknown;
-      readonly isError: boolean;
     } & BaseMessageContent)
   | ({
       readonly type: 'custom';

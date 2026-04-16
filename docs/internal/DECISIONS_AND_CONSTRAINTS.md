@@ -5,9 +5,10 @@ This file records important implementation choices and limits that are visible i
 ## Current runtime direction
 
 - The public runtime is transport-first around `ITransport`, not provider-first. Evidence: `packages/chat-core/src/types/transport.ts`, `packages/chat-core/src/engine/chat-engine.ts`.
-- Polling is the only first-party concrete transport in the repo. Evidence: `packages/chat-transport-polling/src/polling-transport.ts`.
+- The repo ships first-party polling and WebSocket transports, with provider-specific integrations layered on top instead of replacing `ITransport`. Evidence: `packages/chat-transport-polling/src/polling-transport.ts`, `packages/chat-transport-websocket/src/websocket-transport.ts`, `packages/chat-provider-dit/src/dit-transport.ts`.
 - The DIT integration is routed through server-owned transport code in `apps/web`, with secrets kept server-side. Evidence: `apps/web/lib/chat/server-chat-engine.ts`, `apps/web/lib/chat/server-config.ts`, `apps/web/app/api/chat/messages/route.ts`.
 - Streaming is modeled through explicit helper methods on `ChatEngine`, not through a built-in provider pipeline. Evidence: `packages/chat-core/src/engine/chat-engine.ts`.
+- Built-in tool invocation transcript semantics are out of scope for the SDK; provider-specific payloads should flow through `custom` messages and consumer-owned renderers instead. Evidence: `packages/chat-core/src/types/message.ts`, `packages/chat-ui/src/default-renderers.tsx`, `packages/chat-devtools/src/ChatDevTools.tsx`.
 
 ## Extensibility constraints
 
@@ -18,7 +19,7 @@ This file records important implementation choices and limits that are visible i
 
 ## Demo app constraints
 
-- The browser runtime is demo-scoped and route-handler-backed. Polling remains the primary transport, while stream lifecycle updates can also be consumed through demo SSE endpoints. Evidence: `apps/web/lib/demo/client-runtime.ts`, `apps/web/app/api/demos/[demoId]/events/route.ts`, `apps/web/components/demo/StreamEventBridge.tsx`.
+- The browser runtime is demo-scoped and route-handler-backed. Polling remains the primary transport for most demos, while stream lifecycle updates can also be consumed through demo SSE endpoints. The `/websocket` demo is the exception: it uses `WebSocketTransport` from `@kaira/chat-transport-websocket` against a dedicated sibling-port bridge (`localhost:3021`) instead of polling for message and typing traffic. Evidence: `apps/web/lib/demo/client-runtime.ts`, `apps/web/app/api/demos/[demoId]/events/route.ts`, `apps/web/components/demo/StreamEventBridge.tsx`, `apps/web/lib/demo/server/demo-websocket-server.ts`.
 - Demo routing is registry-driven so the showcase can expose multiple isolated runtimes without one global engine in the root layout. Evidence: `apps/web/config/demo-registry.ts`, `apps/web/components/demo/DemoRuntimeProvider.tsx`, `apps/web/app/page.tsx`.
 - The DIT demo remains env-gated, but missing DIT config no longer prevents the rest of `apps/web` from booting. Evidence: `apps/web/config/dit-demo.ts`, `apps/web/lib/chat/server-config.ts`, `apps/web/app/dit-modive/page.tsx`.
 - Local demos exercise stream lifecycle events, typing indicators, seeded media content, and persistence flows without depending on DIT. Evidence: `apps/web/lib/demo/server/runtime-registry.ts`, `apps/web/components/chat/ChatSurface.tsx`, `apps/web/components/demo/PersistenceDemo.tsx`.

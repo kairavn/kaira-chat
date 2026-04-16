@@ -65,10 +65,6 @@ function messagePreview(message: Message): string {
       return message.name;
     case 'location':
       return message.label ?? `${message.latitude}, ${message.longitude}`;
-    case 'tool_call':
-      return `${message.toolCalls.length} tool call(s)`;
-    case 'tool_result':
-      return `${message.toolCallId} result`;
     case 'custom':
       return message.customType;
     default:

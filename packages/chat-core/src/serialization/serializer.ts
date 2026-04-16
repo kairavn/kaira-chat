@@ -8,7 +8,6 @@ import type {
   MessageStatus,
   MessageType,
   SystemEventKind,
-  ToolCall,
 } from '../types/message.js';
 import type { Participant, ParticipantRole } from '../types/participant.js';
 
@@ -23,8 +22,6 @@ const MESSAGE_TYPES = [
   'location',
   'system',
   'ai',
-  'tool_call',
-  'tool_result',
   'custom',
 ] as const satisfies ReadonlyArray<MessageType>;
 const MESSAGE_STATUSES = [
@@ -57,7 +54,7 @@ const AI_STREAM_STATES = [
   'complete',
   'error',
 ] as const satisfies ReadonlyArray<AIStreamState>;
-const AI_FINISH_REASONS = ['stop', 'length', 'tool_calls', 'error'] as const;
+const AI_FINISH_REASONS = ['stop', 'length', 'error'] as const;
 
 function assertRecord(value: unknown, label: string): asserts value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -117,17 +114,17 @@ function parseOptionalNonNegativeNumber(value: unknown, field: string): number |
   return parsedValue;
 }
 
-function parseOptionalBoolean(value: unknown, field: string): boolean | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
+// function parseOptionalBoolean(value: unknown, field: string): boolean | undefined {
+//   if (value === undefined) {
+//     return undefined;
+//   }
 
-  if (typeof value !== 'boolean') {
-    throw createChatError('validation', `${field}: expected boolean, got ${typeof value}`);
-  }
+//   if (typeof value !== 'boolean') {
+//     throw createChatError('validation', `${field}: expected boolean, got ${typeof value}`);
+//   }
 
-  return value;
-}
+//   return value;
+// }
 
 function parseStringLiteral<TValue extends string>(
   value: unknown,
@@ -224,27 +221,10 @@ function parseLongitude(value: unknown, field: string): number {
   return longitude;
 }
 
-function parseToolCall(value: unknown, field: string): ToolCall {
-  assertRecord(value, field);
-  return {
-    id: parseRequiredString(value['id'], `${field}.id`),
-    name: parseRequiredString(value['name'], `${field}.name`),
-    arguments: parseRequiredRecord(value['arguments'], `${field}.arguments`),
-  };
-}
-
-function parseRequiredRecord(value: unknown, field: string): Record<string, unknown> {
-  assertRecord(value, field);
-  return { ...value };
-}
-
-function parseToolCalls(value: unknown, field: string): ReadonlyArray<ToolCall> {
-  if (!Array.isArray(value)) {
-    throw createChatError('validation', `${field}: expected an array`);
-  }
-
-  return value.map((item, index) => parseToolCall(item, `${field}[${index}]`));
-}
+// function parseRequiredRecord(value: unknown, field: string): Record<string, unknown> {
+//   assertRecord(value, field);
+//   return { ...value };
+// }
 
 function parseAIMetadata(value: unknown, field: string): AIMetadata | undefined {
   if (value === undefined) {
@@ -432,24 +412,6 @@ function parseMessageValue(value: unknown): Message {
         ...(parseAIMetadata(value['aiMetadata'], 'Message.aiMetadata') !== undefined
           ? { aiMetadata: parseAIMetadata(value['aiMetadata'], 'Message.aiMetadata') }
           : {}),
-      };
-    case 'tool_call':
-      return {
-        ...shared,
-        type,
-        toolCalls: parseToolCalls(value['toolCalls'], 'Message.toolCalls'),
-      };
-    case 'tool_result':
-      return {
-        ...shared,
-        type,
-        toolCallId: parseRequiredString(value['toolCallId'], 'Message.toolCallId'),
-        result: value['result'],
-        isError:
-          parseOptionalBoolean(value['isError'], 'Message.isError') ??
-          (() => {
-            throw createChatError('validation', 'Message.isError: expected boolean');
-          })(),
       };
     case 'custom':
       return {

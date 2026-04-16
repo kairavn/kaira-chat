@@ -1,6 +1,7 @@
 # Transport API
 
-`ITransport` abstracts realtime communication from `ChatEngine`.
+`ITransport` abstracts realtime communication from `ChatEngine`, and the repo ships first-party
+polling and WebSocket adapters on top of that contract.
 
 ## Interface
 
@@ -35,95 +36,122 @@ interface TypingTransportPayload {
 }
 ```
 
-## Custom WebSocket Transport Example
+## First-Party WebSocket Transport
 
 ```ts
-import type { ConnectionState, ITransport, TransportEvent, Unsubscribe } from '@kaira/chat-core';
+import type { TransportEvent, TypingTransportPayload } from '@kaira/chat-core';
+import type { WebSocketTransportConfig } from '@kaira/chat-transport-websocket';
 
-type MessageTransportEvent = TransportEvent<'message'>;
+import { ChatSerializer } from '@kaira/chat-core';
+import { WebSocketTransport } from '@kaira/chat-transport-websocket';
+
+type DemoTransportEvent = TransportEvent<'message' | 'typing'>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isMessageTransportEvent(value: unknown): value is MessageTransportEvent {
+function isTypingPayload(value: unknown): value is TypingTransportPayload {
   return (
     isRecord(value) &&
-    value['type'] === 'message' &&
-    typeof value['timestamp'] === 'number' &&
-    isRecord(value['payload']) &&
-    typeof value['payload']['id'] === 'string' &&
-    typeof value['payload']['conversationId'] === 'string'
+    (value['action'] === 'start' || value['action'] === 'stop') &&
+    typeof value['conversationId'] === 'string' &&
+    isRecord(value['participant']) &&
+    typeof value['participant']['id'] === 'string'
   );
 }
 
-export class WebSocketTransport implements ITransport<
-  MessageTransportEvent,
-  MessageTransportEvent
-> {
-  private socket: WebSocket | undefined;
-  private state: ConnectionState = 'disconnected';
-  private readonly messageHandlers = new Set<(event: MessageTransportEvent) => void>();
-  private readonly stateHandlers = new Set<(state: ConnectionState) => void>();
+const serializer = new ChatSerializer();
 
-  constructor(private readonly url: string) {}
-
-  async connect(): Promise<void> {
-    if (this.state !== 'disconnected') return;
-    this.setState('connecting');
-    this.socket = new WebSocket(this.url);
-
-    await new Promise<void>((resolve, reject) => {
-      if (!this.socket) return reject(new Error('Socket unavailable'));
-      this.socket.onopen = () => {
-        this.setState('connected');
-        resolve();
-      };
-      this.socket.onerror = () => reject(new Error('WebSocket connection failed'));
-      this.socket.onmessage = (event) => {
-        const payload = JSON.parse(event.data) as unknown;
-        if (!isMessageTransportEvent(payload)) {
-          return;
-        }
-        for (const handler of this.messageHandlers) handler(payload);
-      };
-      this.socket.onclose = () => this.setState('reconnecting');
-    });
+function parseTransportEvent(value: unknown): DemoTransportEvent {
+  if (
+    !isRecord(value) ||
+    typeof value['type'] !== 'string' ||
+    typeof value['timestamp'] !== 'number'
+  ) {
+    throw new Error('Invalid transport event frame.');
   }
 
-  async disconnect(): Promise<void> {
-    if (!this.socket) return;
-    this.setState('disconnecting');
-    this.socket.close();
-    this.socket = undefined;
-    this.setState('disconnected');
+  if (value['type'] === 'message') {
+    return {
+      type: 'message',
+      payload: serializer.deserializeMessage(JSON.stringify(value['payload'])),
+      timestamp: value['timestamp'],
+    };
   }
 
-  async send(event: MessageTransportEvent): Promise<void> {
-    if (!this.socket || this.state !== 'connected') return;
-    this.socket.send(JSON.stringify(event));
+  if (value['type'] === 'typing' && isTypingPayload(value['payload'])) {
+    return {
+      type: 'typing',
+      payload: value['payload'],
+      timestamp: value['timestamp'],
+    };
   }
 
-  onMessage(handler: (event: MessageTransportEvent) => void): Unsubscribe {
-    this.messageHandlers.add(handler);
-    return () => this.messageHandlers.delete(handler);
-  }
-
-  onStateChange(handler: (state: ConnectionState) => void): Unsubscribe {
-    this.stateHandlers.add(handler);
-    return () => this.stateHandlers.delete(handler);
-  }
-
-  getState(): ConnectionState {
-    return this.state;
-  }
-
-  private setState(next: ConnectionState): void {
-    this.state = next;
-    for (const handler of this.stateHandlers) handler(next);
-  }
+  throw new Error('Unsupported transport event type.');
 }
+
+const config: WebSocketTransportConfig<DemoTransportEvent, DemoTransportEvent> = {
+  url: 'wss://example.com/chat?conversationId=demo',
+  capabilities: {
+    typing: true,
+  },
+  reconnect: true,
+  reconnectDelayMs: 1000,
+  maxReconnectDelayMs: 30_000,
+  backoffMultiplier: 2,
+  jitterRatio: 0.2,
+  deserialize: (frame) => {
+    if (typeof frame !== 'string') {
+      return null;
+    }
+
+    const parsed: unknown = JSON.parse(frame);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => parseTransportEvent(item));
+    }
+
+    return parseTransportEvent(parsed);
+  },
+};
+
+const transport = new WebSocketTransport(config);
 ```
+
+Notes:
+
+- `deserialize` is required and keeps frame parsing provider-agnostic.
+- `serialize` is optional; it defaults to `JSON.stringify(event)`.
+- `deserialize` may return one event, an array of events, or `null`.
+- Returning an array is useful for one-shot initial sync frames that seed message
+  history and typing state before incremental realtime updates begin.
+- Unexpected closes transition the transport to `reconnecting` and retry with backoff unless `reconnect` is set to `false`.
+- `send()` rejects while the transport is not connected.
+
+## Choosing WebSocket vs Polling
+
+Choose WebSocket when:
+
+- your backend already owns a persistent socket channel
+- you want lower-latency typing or message fan-out
+- reconnect behavior is part of the consumer contract you need to verify
+
+Choose polling when:
+
+- your backend surface is plain HTTP only
+- you want the simplest deployment and debugging path
+- a small delay between sends and receives is acceptable
+
+In this repo, the internal `apps/web` demo remains polling-first overall. The
+new `/websocket` showcase is additive and local-only: it still bootstraps the
+conversation over the existing HTTP demo routes, then switches message and
+typing traffic to `WebSocketTransport` so the package can be exercised manually
+without refactoring the rest of the demo runtime.
+
+## Custom Transport Pattern
+
+You can still build your own adapter when you need non-WebSocket framing, native bridge
+integration, or backend-specific behavior. The contract stays the same.
 
 ## Polling Transport
 

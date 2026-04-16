@@ -38,6 +38,9 @@ engine.stopTyping('demo-room');
 Typing support over transports is optional. Local typing state still updates even when the
 active transport does not advertise typing capability.
 
+Provider-specific transcript payloads should use `custom` messages. Built-in SDK defaults do not
+include tool invocation transcript semantics.
+
 ## Documentation
 
 - [Project docs](https://github.com/Kaira/chat-core)

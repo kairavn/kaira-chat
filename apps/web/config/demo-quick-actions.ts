@@ -61,6 +61,21 @@ export const STREAMING_QUICK_ACTIONS: ReadonlyArray<DemoQuickAction> = [
   },
 ] as const;
 
+export const WEBSOCKET_QUICK_ACTIONS: ReadonlyArray<DemoQuickAction> = [
+  {
+    id: 'websocket-transport',
+    label: 'Trace Socket',
+    description: 'Ask the local backend to explain the WebSocket transport path.',
+    prompt: 'Explain the WebSocket transport path in this demo.',
+  },
+  {
+    id: 'websocket-reconnect',
+    label: 'Reconnect Check',
+    description: 'Ask for the manual reconnect verification checklist.',
+    prompt: 'How should I verify reconnect behavior in this WebSocket demo?',
+  },
+] as const;
+
 export const MEDIA_QUICK_ACTIONS: ReadonlyArray<DemoQuickAction> = [
   {
     id: 'media-image',

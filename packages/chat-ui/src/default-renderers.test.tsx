@@ -50,15 +50,10 @@ describe('@kaira/chat-ui default renderers', () => {
         <MessageRenderer
           message={{
             ...baseMessage,
-            id: 'm-tool',
-            type: 'tool_call',
-            toolCalls: [
-              {
-                id: 'call-1',
-                toolName: 'search',
-                arguments: { query: 'docs' },
-              },
-            ],
+            id: 'm-custom-2',
+            type: 'custom',
+            customType: 'workflow',
+            payload: { step: 'search' },
           }}
           registry={new RendererRegistry()}
         />
@@ -66,8 +61,7 @@ describe('@kaira/chat-ui default renderers', () => {
     );
 
     expect(screen.getAllByText(/Unsupported message/i)).toHaveLength(2);
-    expect(screen.getByText(/Message type: custom/i)).toBeTruthy();
-    expect(screen.getByText(/Message type: tool_call/i)).toBeTruthy();
+    expect(screen.getAllByText(/Message type: custom/i)).toHaveLength(2);
   });
 
   it('renders streaming ai messages with a text-stream affordance', () => {

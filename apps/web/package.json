@@ -19,10 +19,13 @@
     "@kaira/chat-react": "workspace:*",
     "@kaira/chat-storage-indexeddb": "workspace:*",
     "@kaira/chat-transport-polling": "workspace:*",
+    "@kaira/chat-transport-websocket": "workspace:*",
     "@kaira/chat-ui": "workspace:*",
     "next": "^16.2.3",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "ws": "^8.18.3",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -30,6 +33,7 @@
     "@types/node": "^22.19.17",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9.39.4",
     "typescript": "^5.9.3",

@@ -20,6 +20,10 @@ export default defineConfig({
         __dirname,
         '../../packages/chat-transport-polling/src/index.ts',
       ),
+      '@kaira/chat-transport-websocket': resolve(
+        __dirname,
+        '../../packages/chat-transport-websocket/src/index.ts',
+      ),
       '@kaira/chat-provider-dit': resolve(
         __dirname,
         '../../packages/chat-provider-dit/src/index.ts',

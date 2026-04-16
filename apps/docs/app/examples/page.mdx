@@ -144,7 +144,125 @@ const transport = new PollingTransport<TransportEvent<'message'>, TransportEvent
 });
 ```
 
-## 3) Streaming AI Example
+## 3) WebSocket Transport Example
+
+This mirrors the new internal `/websocket` showcase path in `apps/web`: keep
+conversation bootstrap on HTTP, then send realtime message and typing traffic
+over `WebSocketTransport`.
+
+```ts
+import type { TransportEvent, TypingTransportPayload } from '@kaira/chat-core';
+
+import { ChatEngine, ChatSerializer } from '@kaira/chat-core';
+import { WebSocketTransport } from '@kaira/chat-transport-websocket';
+
+const serializer = new ChatSerializer();
+
+type DemoTransportEvent = TransportEvent<'message' | 'typing'>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isTypingPayload(value: unknown): value is TypingTransportPayload {
+  return (
+    isRecord(value) &&
+    (value['action'] === 'start' || value['action'] === 'stop') &&
+    typeof value['conversationId'] === 'string' &&
+    isRecord(value['participant']) &&
+    typeof value['participant']['id'] === 'string'
+  );
+}
+
+function parseBootstrapResponse(value: unknown): void {
+  if (!isRecord(value) || value['success'] !== true || !isRecord(value['data'])) {
+    throw new Error('Invalid bootstrap response.');
+  }
+}
+
+async function bootstrapConversation(): Promise<void> {
+  const response = await fetch('/api/chat/conversation', {
+    method: 'POST',
+  });
+  parseBootstrapResponse(await response.json());
+}
+
+function parseTransportEvent(value: unknown): DemoTransportEvent {
+  if (
+    !isRecord(value) ||
+    typeof value['type'] !== 'string' ||
+    typeof value['timestamp'] !== 'number'
+  ) {
+    throw new Error('Invalid transport event frame.');
+  }
+
+  if (value['type'] === 'message') {
+    return {
+      type: 'message',
+      payload: serializer.deserializeMessage(JSON.stringify(value['payload'])),
+      timestamp: value['timestamp'],
+    };
+  }
+
+  if (value['type'] === 'typing' && isTypingPayload(value['payload'])) {
+    return {
+      type: 'typing',
+      payload: value['payload'],
+      timestamp: value['timestamp'],
+    };
+  }
+
+  throw new Error('Unsupported transport event type.');
+}
+
+export async function createWebSocketEngine(): Promise<ChatEngine> {
+  await bootstrapConversation();
+  const sessionId = crypto.randomUUID();
+  const socketUrl = new URL('ws://localhost:3021/demo-websocket');
+  socketUrl.searchParams.set('demoId', 'websocket');
+  socketUrl.searchParams.set('sessionId', sessionId);
+
+  const transport = new WebSocketTransport<DemoTransportEvent, DemoTransportEvent>({
+    url: socketUrl.toString(),
+    capabilities: {
+      typing: true,
+    },
+    deserialize: (frame) => {
+      if (typeof frame !== 'string') {
+        return null;
+      }
+
+      const parsed: unknown = JSON.parse(frame);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => parseTransportEvent(item));
+      }
+
+      return parseTransportEvent(parsed);
+    },
+  });
+
+  return new ChatEngine({
+    transport,
+    sender: {
+      id: 'sdk-user',
+      role: 'user',
+      displayName: 'SDK Explorer',
+    },
+  });
+}
+```
+
+Caveats:
+
+- Keep bootstrap or conversation discovery on HTTP unless your socket protocol
+  already covers it.
+- The first frame may reasonably be an array of transport events for initial
+  sync.
+- If the socket drops, `WebSocketTransport` handles reconnect attempts, but your
+  backend still needs to accept the resumed session and replay any required
+  state.
+
+## 4) Streaming AI Example
 
 ```ts
 import type { ChatEngine } from '@kaira/chat-core';
