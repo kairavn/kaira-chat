@@ -5,6 +5,7 @@ This file records important implementation choices and limits that are visible i
 ## Current runtime direction
 
 - The public runtime is transport-first around `ITransport`, not provider-first. Evidence: `packages/chat-core/src/types/transport.ts`, `packages/chat-core/src/engine/chat-engine.ts`.
+- Current productization planning remains transport-first and does not commit the current milestone to implementing `IProvider`. Evidence: `packages/chat-core/src/types/transport.ts`, `packages/chat-core/src/types/provider.ts`, `packages/chat-core/src/engine/chat-engine.ts`.
 - The repo ships first-party polling and WebSocket transports, with provider-specific integrations layered on top instead of replacing `ITransport`. Evidence: `packages/chat-transport-polling/src/polling-transport.ts`, `packages/chat-transport-websocket/src/websocket-transport.ts`, `packages/chat-provider-dit/src/dit-transport.ts`.
 - The DIT integration is routed through server-owned transport code in `apps/web`, with secrets kept server-side. Evidence: `apps/web/lib/chat/server-chat-engine.ts`, `apps/web/lib/chat/server-config.ts`, `apps/web/app/api/chat/messages/route.ts`.
 - Streaming is modeled through explicit helper methods on `ChatEngine`, not through a built-in provider pipeline. Evidence: `packages/chat-core/src/engine/chat-engine.ts`.

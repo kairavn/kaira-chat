@@ -26,6 +26,13 @@ Manual docs can drift. Never use `apps/docs` or a README as sole evidence for im
 | `DECISIONS_AND_CONSTRAINTS.md` | durable implementation constraints and inferred caveats | manual doc                               |
 | `TESTING_STRATEGY.md`          | validation expectations by surface                      | manual doc                               |
 
+## Related planning docs
+
+| Path                                  | Purpose                                           | Notes                                                       |
+| ------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
+| `docs/roadmaps/`                      | internal roadmap and milestone planning documents | planning artifacts, not implementation status source        |
+| `docs/roadmaps/sdk-productization.md` | current SDK productization milestone roadmap      | transport-first internal roadmap; separate from status docs |
+
 ## Feature status system
 
 - Canonical source: `docs/internal/feature-status.json`
@@ -51,5 +58,6 @@ pnpm docs:status:check
 ## When updating docs
 
 - Prefer updating an existing internal doc over creating another status or overview file.
+- Keep roadmap docs separate from status docs. Roadmaps describe intended implementation work; status docs describe current source-backed reality.
 - Keep docs compact and evidence-backed.
 - If a statement is inferred rather than explicit in source, label it as inferred.
