@@ -6,11 +6,14 @@ import type { DemoClientRuntime } from '@/lib/demo/client-runtime';
 import type { JSX, ReactNode } from 'react';
 
 import dynamic from 'next/dynamic';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { ChatProvider } from '@kaira/chat-react';
 
-import { getOrCreateDemoClientRuntime } from '@/lib/demo/client-runtime';
+import {
+  clearDemoClientRuntimeCache,
+  getOrCreateDemoClientRuntime,
+} from '@/lib/demo/client-runtime';
 
 const ChatDevTools = dynamic(
   async () => (await import('@/components/demo/ChatDevToolsClient')).ChatDevToolsClient,
@@ -47,6 +50,7 @@ type DemoRuntimeReadiness = DemoRuntimeReady | DemoRuntimeConnecting | DemoRunti
 interface DemoRuntimeContextValue {
   readonly readiness: DemoRuntimeReadiness;
   readonly reconnect: () => void;
+  readonly clearPersistedMessages: () => Promise<void>;
   readonly runtime: DemoClientRuntime;
 }
 
@@ -60,6 +64,7 @@ interface DemoRuntimeProviderInstanceProps {
   readonly storageName: string;
   readonly sender: Participant;
   readonly enableStreamingBridge: boolean;
+  readonly onPersistStorageCleared: () => void;
   readonly children: ReactNode;
 }
 
@@ -144,15 +149,19 @@ export function DemoRuntimeProvider({
     runtimeSender,
     enableStreamingBridge,
   );
+  const [persistClearRevision, setPersistClearRevision] = useState(0);
 
   return (
     <DemoRuntimeProviderInstance
-      key={runtimeKey}
+      key={`${runtimeKey}::__persist__${persistClearRevision}`}
       demoId={demoId}
       apiBasePath={apiBasePath}
       storageName={storageName}
       sender={runtimeSender}
       enableStreamingBridge={enableStreamingBridge}
+      onPersistStorageCleared={() => {
+        setPersistClearRevision((current) => current + 1);
+      }}
     >
       {children}
     </DemoRuntimeProviderInstance>
@@ -165,6 +174,7 @@ function DemoRuntimeProviderInstance({
   storageName,
   sender,
   enableStreamingBridge,
+  onPersistStorageCleared,
   children,
 }: DemoRuntimeProviderInstanceProps): JSX.Element {
   const [connectRevision, setConnectRevision] = useState(0);
@@ -254,6 +264,14 @@ function DemoRuntimeProviderInstance({
     };
   }, [connectRevision, runtimeState.runtime]);
 
+  const clearPersistedMessages = useCallback(async (): Promise<void> => {
+    const { engine, storage } = runtimeState.runtime;
+    await engine.disconnect();
+    await storage.clear();
+    clearDemoClientRuntimeCache();
+    onPersistStorageCleared();
+  }, [onPersistStorageCleared, runtimeState.runtime]);
+
   const runtimeContextValue: DemoRuntimeContextValue = {
     readiness,
     reconnect() {
@@ -263,6 +281,7 @@ function DemoRuntimeProviderInstance({
       });
       setConnectRevision((current) => current + 1);
     },
+    clearPersistedMessages,
     runtime: runtimeState.runtime,
   };
 
@@ -330,4 +349,15 @@ export function useDemoRuntimeReconnect(): () => void {
   }
 
   return context.reconnect;
+}
+
+export function useDemoRuntimeClearPersistedMessages(): () => Promise<void> {
+  const context = useContext(DemoRuntimeContext);
+  if (!context) {
+    throw new Error(
+      'useDemoRuntimeClearPersistedMessages must be used within DemoRuntimeProvider.',
+    );
+  }
+
+  return context.clearPersistedMessages;
 }

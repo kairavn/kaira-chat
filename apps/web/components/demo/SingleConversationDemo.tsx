@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 
 import { ChatSurface } from '@/components/chat/ChatSurface';
 
+import { DemoClearLocalStorageCta } from './DemoClearLocalStorageCta';
 import { useDemoRuntime } from './DemoRuntimeProvider';
 import { StreamEventBridge } from './StreamEventBridge';
 
@@ -99,6 +100,7 @@ export function SingleConversationDemo({
       {runtime.supportsStreamingBridge ? (
         <StreamEventBridge conversationId={conversationId} />
       ) : null}
+      <DemoClearLocalStorageCta onClearError={setError} />
       <ChatSurface
         title={title}
         description={description}

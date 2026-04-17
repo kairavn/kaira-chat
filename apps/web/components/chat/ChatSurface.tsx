@@ -72,6 +72,7 @@ export function ChatSurface({
   const shouldAutoScrollRef = useRef(true);
   const lastScrollTopRef = useRef(0);
   const activeOptimisticNoncesRef = useRef(new Set<string>());
+  const pendingAssistantMessageIdsRef = useRef<Set<string> | null>(null);
   const pendingHistoryRestoreRef = useRef<PendingHistoryRestore | null>(null);
   const isSendingRef = useRef(false);
   const isRuntimeReady = runtimeReadiness.status === 'ready';
@@ -86,7 +87,6 @@ export function ChatSurface({
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
-  const [thinkingSince, setThinkingSince] = useState<number | null>(null);
   const hasHistoryWindow = historyWindow !== undefined;
   const initialVisibleMessageCount = historyWindow?.initialVisibleCount ?? 0;
   const [visibleMessageCount, setVisibleMessageCount] = useState<number>(
@@ -104,8 +104,10 @@ export function ChatSurface({
 
     setVisibleMessageCount(initialVisibleMessageCount);
     pendingHistoryRestoreRef.current = null;
+    pendingAssistantMessageIdsRef.current = null;
     shouldAutoScrollRef.current = true;
     lastScrollTopRef.current = 0;
+    setIsThinking(false);
   }, [conversationId, hasHistoryWindow, initialVisibleMessageCount]);
 
   useEffect(() => {
@@ -126,25 +128,50 @@ export function ChatSurface({
     }
 
     setIsThinking(false);
-    setThinkingSince(null);
   }, [isStreaming, isThinking]);
 
   useEffect(() => {
-    if (!isThinking || thinkingSince === null) {
+    if (!isThinking) {
       return;
     }
 
-    const hasAssistantResponse = mergedMessages.some(
-      (message) => message.sender.role === 'assistant' && message.timestamp >= thinkingSince,
-    );
-
-    if (!hasAssistantResponse) {
+    const pendingAssistantMessageIds = pendingAssistantMessageIdsRef.current;
+    if (!pendingAssistantMessageIds) {
       return;
     }
 
+    const assistantResponse = [...mergedMessages]
+      .reverse()
+      .find(
+        (message) =>
+          message.sender.role === 'assistant' && !pendingAssistantMessageIds.has(message.id),
+      );
+
+    if (!assistantResponse) {
+      return;
+    }
+
+    pendingAssistantMessageIdsRef.current = null;
     setIsThinking(false);
-    setThinkingSince(null);
-  }, [isThinking, mergedMessages, thinkingSince]);
+    window.requestAnimationFrame(() => {
+      const container = scrollRef.current;
+      if (!container) {
+        return;
+      }
+
+      const selectorMessageId =
+        typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+          ? CSS.escape(assistantResponse.id)
+          : assistantResponse.id.replaceAll('"', '\\"');
+      const messageElement = container.querySelector<HTMLElement>(
+        `[data-message-id="${selectorMessageId}"]`,
+      );
+      messageElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    });
+  }, [isThinking, mergedMessages]);
 
   useEffect(() => {
     if (!isThinking) {
@@ -152,8 +179,8 @@ export function ChatSurface({
     }
 
     const timer = window.setTimeout(() => {
+      pendingAssistantMessageIdsRef.current = null;
       setIsThinking(false);
-      setThinkingSince(null);
       setError('AI response timed out. Please try again.');
     }, AI_THINKING_TIMEOUT_MS);
 
@@ -227,10 +254,14 @@ export function ChatSurface({
 
     addOptimisticMessage(optimisticMessage, nonce);
     activeOptimisticNoncesRef.current.add(nonce);
+    pendingAssistantMessageIdsRef.current = new Set(
+      mergedMessages
+        .filter((message) => message.sender.role === 'assistant')
+        .map((message) => message.id),
+    );
     setError(null);
     stopTyping();
     setIsThinking(true);
-    setThinkingSince(optimisticTimestamp);
     isSendingRef.current = true;
     setIsSending(true);
 
@@ -250,9 +281,9 @@ export function ChatSurface({
       });
     } catch (sendError) {
       activeOptimisticNoncesRef.current.delete(nonce);
+      pendingAssistantMessageIdsRef.current = null;
       removeOptimisticMessage(nonce);
       setIsThinking(false);
-      setThinkingSince(null);
       setError(sendError instanceof Error ? sendError.message : 'Failed to send message');
     } finally {
       isSendingRef.current = false;

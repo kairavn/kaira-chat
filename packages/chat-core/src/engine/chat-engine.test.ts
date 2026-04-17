@@ -1148,4 +1148,106 @@ describe('ChatEngine — transport edge cases', () => {
     expect(storage.getMessage).toHaveBeenCalledWith(sentMessage.id);
     await engine.disconnect();
   });
+
+  it('suppresses own echo via clientNonce when storage is in use', async () => {
+    const transport = createMockTransport();
+    const storage = createMockStorage();
+    const sender = { id: 'user-1', role: 'user' as const };
+    const engine = new ChatEngine({ transport, storage, sender });
+    await engine.connect();
+
+    const receivedHandler = vi.fn();
+    engine.on('message:received', receivedHandler);
+
+    const conversation = await engine.createConversation({ type: 'direct', participants: [] });
+    const clientNonce = 'nonce-echo-storage-test';
+    await engine.sendMessage(conversation.id, {
+      type: 'text',
+      content: 'hello from storage mode',
+      metadata: { clientNonce },
+    });
+
+    transport.simulateMessage({
+      id: 'echo-from-server',
+      type: 'text',
+      conversationId: conversation.id,
+      sender,
+      timestamp: Date.now(),
+      status: 'sent',
+      content: 'hello from storage mode',
+      metadata: { clientNonce },
+    });
+
+    await flushAsyncHandlers();
+    expect(receivedHandler).not.toHaveBeenCalled();
+    await engine.disconnect();
+  });
+
+  it('suppresses own echo via clientNonce after engine restart with same storage (reload simulation)', async () => {
+    const transport = createMockTransport();
+    const storage = createMockStorage();
+    const sender = { id: 'user-1', role: 'user' as const };
+    const firstEngine = new ChatEngine({ storage, sender });
+    const conversation = await firstEngine.createConversation({ type: 'direct', participants: [] });
+    const clientNonce = 'nonce-reload-simulation';
+    await firstEngine.sendMessage(conversation.id, {
+      type: 'text',
+      content: 'persisted before reload',
+      metadata: { clientNonce },
+    });
+
+    const secondEngine = new ChatEngine({ transport, storage, sender });
+    await secondEngine.connect();
+    const receivedHandler = vi.fn();
+    secondEngine.on('message:received', receivedHandler);
+
+    transport.simulateMessage({
+      id: 'dit-echo-id-after-reload',
+      type: 'text',
+      conversationId: conversation.id,
+      sender,
+      timestamp: Date.now(),
+      status: 'sent',
+      content: 'persisted before reload',
+      metadata: { clientNonce },
+    });
+
+    await flushAsyncHandlers();
+    expect(receivedHandler).not.toHaveBeenCalled();
+    await secondEngine.disconnect();
+  });
+
+  it('does not suppress echo from a different sender with the same clientNonce', async () => {
+    const transport = createMockTransport();
+    const storage = createMockStorage();
+    const sender = { id: 'user-1', role: 'user' as const };
+    const engine = new ChatEngine({ transport, storage, sender });
+    await engine.connect();
+
+    const receivedHandler = vi.fn();
+    engine.on('message:received', receivedHandler);
+
+    const conversation = await engine.createConversation({ type: 'direct', participants: [] });
+    const clientNonce = 'nonce-different-sender';
+    await engine.sendMessage(conversation.id, {
+      type: 'text',
+      content: 'my message',
+      metadata: { clientNonce },
+    });
+
+    transport.simulateMessage({
+      id: 'msg-other-sender',
+      type: 'text',
+      conversationId: conversation.id,
+      sender: { id: 'user-2', role: 'user' },
+      timestamp: Date.now(),
+      status: 'sent',
+      content: 'coincidental nonce match',
+      metadata: { clientNonce },
+    });
+
+    await flushAsyncHandlers();
+    expect(receivedHandler).toHaveBeenCalledOnce();
+    await engine.disconnect();
+  });
 });

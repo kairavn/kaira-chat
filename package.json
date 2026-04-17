@@ -6,6 +6,8 @@
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=web",
     "dev:docs": "turbo run dev --filter=docs",
+    "start:web": "turbo run start --filter=web",
+    "start:docs": "turbo run start --filter=docs",
     "docs:status:sync": "node ./scripts/render-feature-status.mjs sync",
     "docs:status:check": "node ./scripts/render-feature-status.mjs check",
     "deps:check": "pnpm exec syncpack lint",

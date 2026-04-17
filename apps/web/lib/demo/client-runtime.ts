@@ -234,6 +234,24 @@ function isTypingTransportPayload(value: unknown): value is TypingTransportPaylo
   );
 }
 
+function coerceWebSocketTextPayload(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value instanceof ArrayBuffer) {
+    return new TextDecoder().decode(value);
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return new TextDecoder().decode(
+      new Uint8Array(value.buffer, value.byteOffset, value.byteLength),
+    );
+  }
+
+  return null;
+}
+
 function parseTransportEvent(value: unknown): TransportEvent<'message' | 'typing'> {
   if (!isRecord(value)) {
     throw new Error('Transport event must be an object');
@@ -264,11 +282,12 @@ function parseWebSocketFrame(
   | TransportEvent<'message' | 'typing'>
   | ReadonlyArray<TransportEvent<'message' | 'typing'>>
   | null {
-  if (typeof value !== 'string') {
+  const textPayload = coerceWebSocketTextPayload(value);
+  if (textPayload === null) {
     return null;
   }
 
-  const parsed: unknown = JSON.parse(value);
+  const parsed: unknown = JSON.parse(textPayload);
   if (Array.isArray(parsed)) {
     return parsed.map((item) => parseTransportEvent(item));
   }
@@ -522,16 +541,17 @@ export function getOrCreateDemoClientRuntime(config: DemoClientRuntimeConfig): D
       const hostname = typeof window === 'undefined' ? '127.0.0.1' : window.location.hostname;
       const protocol = typeof window === 'undefined' ? 'http:' : window.location.protocol;
 
+      const websocketUrl = buildDemoWebSocketUrl({
+        demoId: DEMO_WEBSOCKET_DEMO_ID,
+        hostname,
+        protocol,
+        sessionId,
+      });
       return new WebSocketTransport<
         TransportEvent<'message' | 'typing'>,
         TransportEvent<'message' | 'typing'>
       >({
-        url: buildDemoWebSocketUrl({
-          demoId: DEMO_WEBSOCKET_DEMO_ID,
-          hostname,
-          protocol,
-          sessionId,
-        }),
+        url: websocketUrl,
         capabilities: {
           typing: true,
         },

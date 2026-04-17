@@ -58,6 +58,7 @@ export const MessageList = memo(function MessageList({
       {viewMessages.map((message) => (
         <li
           key={message.id}
+          data-message-id={message.id}
           style={{
             listStyle: 'none',
             borderRadius: 12,

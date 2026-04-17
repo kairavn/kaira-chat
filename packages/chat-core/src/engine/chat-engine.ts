@@ -31,6 +31,7 @@ import { createChatError } from '../types/error.js';
 import { generateId } from '../utils/id.js';
 
 const MESSAGE_INDEX_MAX = 10_000;
+const SENT_NONCE_MAX = 1_000;
 const DEFAULT_TYPING_CONFIG = {
   emitThrottleMs: 2000,
   idleTimeoutMs: 1500,
@@ -136,21 +137,6 @@ function validateBuiltInMessagePayload(message: Message): void {
     default:
       return;
   }
-}
-
-function hasMatchingClientNonce(
-  messages: Iterable<Message>,
-  conversationId: string,
-  senderId: string,
-  clientNonce: string,
-): boolean {
-  for (const message of messages) {
-    if (message.conversationId !== conversationId) continue;
-    if (message.sender.id !== senderId) continue;
-    if (getClientNonceFromMetadata(message.metadata) !== clientNonce) continue;
-    return true;
-  }
-  return false;
 }
 
 function getConnectionTransitionActions(
@@ -464,6 +450,10 @@ export class ChatEngine implements IChatEngine {
   private readonly inMemoryConversations = new Map<string, Conversation>();
   private readonly messageIndex = new Set<string>();
   private readonly pendingInboundMessageIds = new Set<string>();
+  private readonly sentClientNonces = new Set<string>();
+  /** Conversations whose outbound clientNonces were loaded from storage (e.g. after page reload). */
+  private readonly hydratedClientNonceConversations = new Set<string>();
+  private readonly nonceHydrationByConversation = new Map<string, Promise<void>>();
   private readonly messageRegistry = new MessageRegistry();
   private readonly localTypingIdleTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly typingEmitTimestamps = new Map<string, number>();
@@ -660,6 +650,17 @@ export class ChatEngine implements IChatEngine {
       await this.storage.saveMessage(finalMessage);
     } else {
       this.inMemoryMessages.set(finalMessage.id, finalMessage);
+    }
+
+    const outboundNonce = getClientNonceFromMetadata(finalMessage.metadata);
+    if (outboundNonce) {
+      this.sentClientNonces.add(outboundNonce);
+      if (this.sentClientNonces.size > SENT_NONCE_MAX) {
+        const oldest = this.sentClientNonces.values().next();
+        if (!oldest.done) {
+          this.sentClientNonces.delete(oldest.value);
+        }
+      }
     }
 
     if (this.transport) {
@@ -964,6 +965,51 @@ export class ChatEngine implements IChatEngine {
     };
   }
 
+  /**
+   * After reload, outbound messages live only in storage while `sentClientNonces` is empty.
+   * Hydrate nonces once per conversation so polled echoes still match.
+   */
+  private ensureSentClientNoncesHydratedFromStorage(conversationId: string): Promise<void> {
+    if (!this.storage) {
+      return Promise.resolve();
+    }
+    if (this.hydratedClientNonceConversations.has(conversationId)) {
+      return Promise.resolve();
+    }
+    const inFlight = this.nonceHydrationByConversation.get(conversationId);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const hydration = Promise.resolve().then(async (): Promise<void> => {
+      try {
+        const page = await this.storage!.getMessages({
+          conversationId,
+          direction: 'desc',
+          limit: 500,
+        });
+        for (const m of page.items) {
+          const n = getClientNonceFromMetadata(m.metadata);
+          if (typeof n === 'string' && m.sender.id === this.defaultSender.id) {
+            this.sentClientNonces.add(n);
+          }
+        }
+        while (this.sentClientNonces.size > SENT_NONCE_MAX) {
+          const oldest = this.sentClientNonces.values().next();
+          if (oldest.done) {
+            break;
+          }
+          this.sentClientNonces.delete(oldest.value);
+        }
+        this.hydratedClientNonceConversations.add(conversationId);
+      } finally {
+        this.nonceHydrationByConversation.delete(conversationId);
+      }
+    });
+    this.nonceHydrationByConversation.set(conversationId, hydration);
+    return hydration;
+  }
+
   private async handleIncomingTransportMessage(message: Message): Promise<void> {
     if (
       typeof message.id !== 'string' ||
@@ -994,16 +1040,16 @@ export class ChatEngine implements IChatEngine {
       );
     }
 
+    if (this.storage) {
+      await this.ensureSentClientNoncesHydratedFromStorage(message.conversationId);
+    }
+
     const inboundClientNonce = getClientNonceFromMetadata(message.metadata);
     const isOwnEchoWithKnownNonce =
       typeof inboundClientNonce === 'string' &&
       message.sender.id === this.defaultSender.id &&
-      hasMatchingClientNonce(
-        this.inMemoryMessages.values(),
-        message.conversationId,
-        message.sender.id,
-        inboundClientNonce,
-      );
+      this.sentClientNonces.has(inboundClientNonce);
+
     if (isOwnEchoWithKnownNonce) {
       this.addToMessageIndex(message.id);
       this.stopTypingByParticipant(
