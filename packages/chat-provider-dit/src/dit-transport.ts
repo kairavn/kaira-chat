@@ -1,5 +1,6 @@
 import type {
   ConnectionState,
+  CursorPage,
   ITransport,
   Message,
   MessageMetadata,
@@ -28,6 +29,14 @@ interface DitSendMessageResponse {
   readonly success: boolean;
 }
 
+export type DitHistoryDirection = 'before' | 'after';
+
+export interface DitHistoryPageQuery {
+  readonly direction: DitHistoryDirection;
+  readonly cursor?: string;
+  readonly limit?: number;
+}
+
 /**
  * Fetch implementation used by DitTransport (allows custom runtime fetch).
  */
@@ -52,6 +61,8 @@ export interface DitTransportConfig {
   readonly senderId: string;
   readonly chatbotNickname: string;
   readonly pollIntervalMs?: number;
+  readonly initialHistoryLimit?: number;
+  readonly initialBackfillPageCount?: number;
   readonly fetch?: DitFetchFn;
   /** Optional SEND_MESSAGE_TO_CHATROOM support. */
   readonly send?: {
@@ -71,6 +82,7 @@ type MessageTransportEvent = TransportEvent<'message'>;
 const SEEN_IDS_MAX = 2000;
 const DIT_PAGE_LIMIT = 100;
 const INITIAL_BACKFILL_MAX_PAGES = 20;
+const MIN_DIT_PAGE_LIMIT = 1;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -199,6 +211,86 @@ function parseDitTimestamp(value: string | undefined): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function normalizePageLimit(value: number | undefined): number {
+  if (value === undefined) {
+    return DIT_PAGE_LIMIT;
+  }
+
+  if (!Number.isFinite(value)) {
+    return DIT_PAGE_LIMIT;
+  }
+
+  return Math.max(MIN_DIT_PAGE_LIMIT, Math.floor(value));
+}
+
+function createDitHistoryPage(
+  messages: ReadonlyArray<Message>,
+  limit: number,
+  direction: DitHistoryDirection,
+): CursorPage<Message> {
+  const nextCursor =
+    messages.length > 0
+      ? direction === 'before'
+        ? messages[0]?.id
+        : messages[messages.length - 1]?.id
+      : undefined;
+  const hasMore = messages.length >= limit;
+
+  return {
+    items: messages,
+    hasMore,
+    ...(hasMore && nextCursor ? { nextCursor } : {}),
+  };
+}
+
+export async function fetchDitHistoryPage(
+  config: Pick<
+    DitTransportConfig,
+    'apiUrl' | 'apiKey' | 'chatroomId' | 'senderId' | 'chatbotNickname' | 'fetch'
+  >,
+  query: DitHistoryPageQuery,
+): Promise<CursorPage<Message>> {
+  const limit = normalizePageLimit(query.limit);
+  const searchParams = new URLSearchParams({
+    direction: query.direction,
+    limit: String(limit),
+  });
+  if (query.cursor) {
+    searchParams.set('cursor', query.cursor);
+  }
+
+  const fetchImpl = config.fetch ?? fetch;
+  const response = await fetchImpl(
+    `${config.apiUrl}/chats/chatroom/${config.chatroomId}?${searchParams.toString()}`,
+    {
+      method: 'GET',
+      headers: {
+        'x-api-key': config.apiKey,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`DIT poll failed (${response.status}): ${errorBody}`);
+  }
+
+  const json = parseDitFetchMessagesResponse(await response.json());
+  if (!json.success) {
+    return createDitHistoryPage([], limit, query.direction);
+  }
+
+  const messages = sortDitMessagesByCreatedAt(json.data).map((item) =>
+    mapDitMessageToCoreMessage(item, {
+      senderId: config.senderId,
+      chatbotNickname: config.chatbotNickname,
+    }),
+  );
+
+  return createDitHistoryPage(messages, limit, query.direction);
+}
+
 /**
  * DIT transport adapter using PollingTransport under the hood.
  */
@@ -272,31 +364,42 @@ export class DitTransport implements ITransport<MessageTransportEvent, MessageTr
       return this.toTransportEvents(initialMessages);
     }
 
-    const incrementalMessages = await this.fetchMessages('after', this.cursor);
-    const sortedMessages = sortDitMessagesByCreatedAt(incrementalMessages);
-    if (sortedMessages.length > 0) {
-      this.cursor = sortedMessages[sortedMessages.length - 1]?.id;
+    const incrementalPage = await fetchDitHistoryPage(this.config, {
+      direction: 'after',
+      cursor: this.cursor,
+    });
+    if (incrementalPage.items.length > 0) {
+      this.cursor = incrementalPage.items[incrementalPage.items.length - 1]?.id;
     }
 
-    return this.toTransportEvents(sortedMessages);
+    return this.toTransportEvents(incrementalPage.items);
   }
 
-  private async fetchInitialHistory(): Promise<ReadonlyArray<DitFetchMessage>> {
-    const collected = new Map<string, DitFetchMessage>();
+  private async fetchInitialHistory(): Promise<ReadonlyArray<Message>> {
+    const collected = new Map<string, Message>();
     let pageCursor: string | undefined;
     let pagesFetched = 0;
+    const limit = normalizePageLimit(this.config.initialHistoryLimit);
+    const maxPages = Math.max(
+      1,
+      Math.floor(this.config.initialBackfillPageCount ?? INITIAL_BACKFILL_MAX_PAGES),
+    );
 
-    while (pagesFetched < INITIAL_BACKFILL_MAX_PAGES) {
-      const page = await this.fetchMessages('before', pageCursor);
-      if (page.length === 0) {
+    while (pagesFetched < maxPages) {
+      const page = await fetchDitHistoryPage(this.config, {
+        direction: 'before',
+        cursor: pageCursor,
+        limit,
+      });
+      if (page.items.length === 0) {
         break;
       }
 
-      for (const message of page) {
+      for (const message of page.items) {
         collected.set(message.id, message);
       }
 
-      const oldestMessage = getOldestDitMessage(page);
+      const oldestMessage = page.items[0];
       if (!oldestMessage || pageCursor === oldestMessage.id) {
         break;
       }
@@ -304,12 +407,12 @@ export class DitTransport implements ITransport<MessageTransportEvent, MessageTr
       pageCursor = oldestMessage.id;
       pagesFetched++;
 
-      if (page.length < DIT_PAGE_LIMIT) {
+      if (!page.hasMore) {
         break;
       }
     }
 
-    const sortedMessages = sortDitMessagesByCreatedAt([...collected.values()]);
+    const sortedMessages = sortCoreMessagesAscending([...collected.values()]);
     if (sortedMessages.length > 0) {
       this.cursor = sortedMessages[sortedMessages.length - 1]?.id;
     }
@@ -317,57 +420,18 @@ export class DitTransport implements ITransport<MessageTransportEvent, MessageTr
     return sortedMessages;
   }
 
-  private async fetchMessages(
-    direction: 'before' | 'after',
-    cursor: string | undefined,
-  ): Promise<ReadonlyArray<DitFetchMessage>> {
-    const searchParams = new URLSearchParams({
-      direction,
-      limit: String(DIT_PAGE_LIMIT),
-    });
-    if (cursor) {
-      searchParams.set('cursor', cursor);
-    }
-
-    const response = await this.fetchImpl(
-      `${this.config.apiUrl}/chats/chatroom/${this.config.chatroomId}?${searchParams.toString()}`,
-      {
-        method: 'GET',
-        headers: {
-          'x-api-key': this.config.apiKey,
-          'Content-Type': 'application/json',
-        },
-      },
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`DIT poll failed (${response.status}): ${errorBody}`);
-    }
-
-    const json = parseDitFetchMessagesResponse(await response.json());
-    if (!json.success) {
-      return [];
-    }
-
-    return json.data;
-  }
-
   private toTransportEvents(
-    messages: ReadonlyArray<DitFetchMessage>,
+    messages: ReadonlyArray<Message>,
   ): ReadonlyArray<MessageTransportEvent> {
-    const newMessages = messages.filter((item) => !this.seenMessageIds.has(item.id));
-    return newMessages.map((item) => {
-      this.seenMessageIds.add(item.id);
+    const newMessages = messages.filter((message) => !this.seenMessageIds.has(message.id));
+    return newMessages.map((message) => {
+      this.seenMessageIds.add(message.id);
       this.pruneSeenIds();
 
       return {
         type: 'message',
-        payload: mapDitMessageToCoreMessage(item, {
-          senderId: this.config.senderId,
-          chatbotNickname: this.config.chatbotNickname,
-        }),
-        timestamp: parseDitTimestamp(item.created_at),
+        payload: message,
+        timestamp: message.timestamp,
       };
     });
   }
@@ -502,9 +566,12 @@ function sortDitMessagesByCreatedAt(
   );
 }
 
-function getOldestDitMessage(
-  messages: ReadonlyArray<DitFetchMessage>,
-): DitFetchMessage | undefined {
-  const sorted = sortDitMessagesByCreatedAt(messages);
-  return sorted[0];
+function sortCoreMessagesAscending(messages: ReadonlyArray<Message>): ReadonlyArray<Message> {
+  return [...messages].sort((left, right) => {
+    if (left.timestamp !== right.timestamp) {
+      return left.timestamp - right.timestamp;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
 }

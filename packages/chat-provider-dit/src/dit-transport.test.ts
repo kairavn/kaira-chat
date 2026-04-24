@@ -393,4 +393,59 @@ describe('DitTransport', () => {
     expect(payloadIds.at(-1)).toBe('page-one-100');
     expect(payloadIds.filter((id) => id === 'page-one-1')).toHaveLength(1);
   });
+
+  it('honors configured initial history limit without extra backfill pages', async () => {
+    const transport = new DitTransport({
+      apiUrl: 'https://example.test',
+      apiKey: 'secret',
+      chatroomId: 'room-1',
+      senderId: 'user-1',
+      chatbotNickname: 'bot-1',
+      initialHistoryLimit: 8,
+      initialBackfillPageCount: 1,
+      fetch: createFetchSequence([
+        {
+          method: 'GET',
+          assert: (url) => {
+            expect(url).toContain('direction=before');
+            expect(url).toContain('limit=8');
+            expect(url).not.toContain('cursor=');
+          },
+          response: () =>
+            createJsonResponse({
+              success: true,
+              data: Array.from({ length: 8 }, (_, index) =>
+                createDitMessage(
+                  `initial-${index + 1}`,
+                  new Date(Date.UTC(2024, 0, 1, 0, index)).toISOString(),
+                  {
+                    message: `initial-${index + 1}`,
+                    speaker_type: 'chatbot',
+                    speaker_id: 'bot-1',
+                  },
+                ),
+              ),
+            }),
+        },
+      ]),
+    });
+
+    const messageHandler = vi.fn();
+    transport.onMessage(messageHandler);
+
+    await transport.connect();
+
+    const payloadIds = messageHandler.mock.calls.map(([event]) => eventPayloadId(event));
+
+    expect(payloadIds).toEqual([
+      'initial-1',
+      'initial-2',
+      'initial-3',
+      'initial-4',
+      'initial-5',
+      'initial-6',
+      'initial-7',
+      'initial-8',
+    ]);
+  });
 });

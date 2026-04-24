@@ -82,15 +82,31 @@ export function SingleConversationDemo({
   if (!conversationId) {
     return (
       <section
+        role="status"
+        aria-live="polite"
         style={{
           borderRadius: 18,
           border: '1px solid #1e293b',
           background: '#0f172a',
           color: '#cbd5e1',
           padding: 20,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
         }}
       >
-        Preparing the demo runtime…
+        <span
+          aria-hidden="true"
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: '#38bdf8',
+            boxShadow: '0 0 18px rgba(56, 189, 248, 0.7)',
+            flex: '0 0 auto',
+          }}
+        />
+        Loading demo history...
       </section>
     );
   }

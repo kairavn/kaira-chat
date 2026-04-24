@@ -4,9 +4,9 @@ import type { Message, MessageMetadata } from '@kaira/chat-core';
 import type { DemoQuickAction } from '@/lib/demo/contracts';
 import type { JSX, ReactNode } from 'react';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { getMessageClientNonce } from '@kaira/chat-core';
+import { getMessageClientNonce, mergeMessageSets } from '@kaira/chat-core';
 import {
   useChatEngine,
   useConnectionState,
@@ -19,7 +19,7 @@ import {
 } from '@kaira/chat-react';
 import { MessageInput } from '@kaira/chat-ui';
 
-import { useDemoRuntimeReadiness } from '@/components/demo/DemoRuntimeProvider';
+import { useDemoRuntime, useDemoRuntimeReadiness } from '@/components/demo/DemoRuntimeProvider';
 import { getRendererRegistry } from '@/lib/chat/renderers';
 
 import { ChatErrorBanner } from './ChatErrorBanner';
@@ -45,6 +45,12 @@ interface VisibleMessageCountState {
   readonly conversationId: string;
   readonly initialVisibleMessageCount: number;
   readonly count: number;
+}
+
+interface LoadedHistoryMessagesState {
+  readonly conversationId: string;
+  readonly messages: ReadonlyArray<Message>;
+  readonly hasMoreRemoteHistory: boolean;
 }
 
 interface ChatSurfaceProps {
@@ -125,6 +131,7 @@ export function ChatSurface({
   historyWindow,
 }: ChatSurfaceProps): JSX.Element {
   const engine = useChatEngine();
+  const runtime = useDemoRuntime();
   const connectionState = useConnectionState();
   const runtimeReadiness = useDemoRuntimeReadiness();
   const messages = useMessages(conversationId);
@@ -140,6 +147,7 @@ export function ChatSurface({
   const activeOptimisticNoncesRef = useRef(new Set<string>());
   const pendingAssistantMessageIdsRef = useRef<Set<string> | null>(null);
   const pendingHistoryRestoreRef = useRef<PendingHistoryRestore | null>(null);
+  const isLoadingOlderHistoryRef = useRef(false);
   const isSendingRef = useRef(false);
   const isRuntimeReady = runtimeReadiness.status === 'ready';
   const canSend = isRuntimeReady && connectionState !== 'disconnecting';
@@ -153,6 +161,9 @@ export function ChatSurface({
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [thinkingConversationId, setThinkingConversationId] = useState<string | null>(null);
+  const [loadingOlderHistoryConversationId, setLoadingOlderHistoryConversationId] = useState<
+    string | null
+  >(null);
   const hasHistoryWindow = historyWindow !== undefined;
   const initialVisibleMessageCount = historyWindow?.initialVisibleCount ?? 0;
   const [visibleMessageCount, setVisibleMessageCount] = useState<VisibleMessageCountState>(() =>
@@ -162,22 +173,45 @@ export function ChatSurface({
       initialVisibleMessageCount,
     ),
   );
+  const [loadedHistoryMessages, setLoadedHistoryMessages] = useState<LoadedHistoryMessagesState>(
+    () => ({
+      conversationId,
+      messages: [],
+      hasMoreRemoteHistory: true,
+    }),
+  );
   const currentVisibleMessageCount = getVisibleMessageCount(
     visibleMessageCount,
     conversationId,
     initialVisibleMessageCount,
   );
+  const hasMoreRemoteHistory =
+    loadedHistoryMessages.conversationId === conversationId
+      ? loadedHistoryMessages.hasMoreRemoteHistory
+      : true;
+  const isLoadingOlderHistory = loadingOlderHistoryConversationId === conversationId;
   const isThinking = thinkingConversationId === conversationId;
+  const allMessages = useMemo(
+    () =>
+      mergeMessageSets(
+        mergedMessages,
+        loadedHistoryMessages.conversationId === conversationId
+          ? loadedHistoryMessages.messages
+          : [],
+      ),
+    [conversationId, loadedHistoryMessages, mergedMessages],
+  );
   const visibleMessages = historyWindow
-    ? mergedMessages.slice(-Math.max(currentVisibleMessageCount, initialVisibleMessageCount))
-    : mergedMessages;
-  const hasHiddenHistory = historyWindow ? visibleMessages.length < mergedMessages.length : false;
+    ? allMessages.slice(-Math.max(currentVisibleMessageCount, initialVisibleMessageCount))
+    : allMessages;
+  const hasHiddenHistory = historyWindow ? visibleMessages.length < allMessages.length : false;
 
   useEffect(() => {
     pendingHistoryRestoreRef.current = null;
     pendingAssistantMessageIdsRef.current = null;
     shouldAutoScrollRef.current = true;
     lastScrollTopRef.current = 0;
+    isLoadingOlderHistoryRef.current = false;
 
     const animationFrame = requestAnimationFrame(() => setThinkingConversationId(null));
 
@@ -295,6 +329,68 @@ export function ChatSurface({
       behavior: 'smooth',
     });
   }, [visibleMessages, streamingPreview?.content, isThinking, typingParticipants]);
+
+  async function loadOlderHistoryPage(): Promise<void> {
+    if (!historyWindow || !hasMoreRemoteHistory || isLoadingOlderHistoryRef.current) {
+      pendingHistoryRestoreRef.current = null;
+      return;
+    }
+
+    const oldestVisibleMessage = visibleMessages[0];
+    if (!oldestVisibleMessage) {
+      pendingHistoryRestoreRef.current = null;
+      return;
+    }
+
+    isLoadingOlderHistoryRef.current = true;
+    setLoadingOlderHistoryConversationId(conversationId);
+    try {
+      const page = await runtime.loadMessagesPage(conversationId, {
+        direction: 'before',
+        cursor: oldestVisibleMessage.id,
+        limit: historyWindow.incrementCount,
+      });
+
+      if (page.items.length === 0) {
+        pendingHistoryRestoreRef.current = null;
+        setLoadedHistoryMessages((current) => ({
+          conversationId,
+          messages: current.conversationId === conversationId ? current.messages : [],
+          hasMoreRemoteHistory: page.hasMore,
+        }));
+        return;
+      }
+
+      setLoadedHistoryMessages((current) => ({
+        conversationId,
+        messages: mergeMessageSets(
+          current.conversationId === conversationId ? current.messages : [],
+          page.items,
+        ),
+        hasMoreRemoteHistory: page.hasMore,
+      }));
+      setVisibleMessageCount((current) =>
+        scopedVisibleMessageCount(
+          conversationId,
+          initialVisibleMessageCount,
+          getVisibleMessageCount(current, conversationId, initialVisibleMessageCount) +
+            page.items.length,
+        ),
+      );
+    } catch (historyError) {
+      pendingHistoryRestoreRef.current = null;
+      setError(
+        historyError instanceof Error
+          ? historyError.message
+          : 'Failed to load older message history.',
+      );
+    } finally {
+      isLoadingOlderHistoryRef.current = false;
+      setLoadingOlderHistoryConversationId((current) =>
+        current === conversationId ? null : current,
+      );
+    }
+  }
 
   async function sendUserMessage(text: string, metadata?: MessageMetadata): Promise<void> {
     if (isSendingRef.current) {
@@ -414,7 +510,6 @@ export function ChatSurface({
 
             if (
               !historyWindow ||
-              !hasHiddenHistory ||
               pendingHistoryRestoreRef.current ||
               element.scrollTop > LOAD_OLDER_HISTORY_THRESHOLD_PX ||
               element.scrollTop >= previousScrollTop
@@ -426,6 +521,12 @@ export function ChatSurface({
               previousScrollHeight: element.scrollHeight,
               previousScrollTop: element.scrollTop,
             };
+
+            if (!hasHiddenHistory) {
+              void loadOlderHistoryPage();
+              return;
+            }
+
             setVisibleMessageCount((current) =>
               scopedVisibleMessageCount(
                 conversationId,
@@ -436,6 +537,23 @@ export function ChatSurface({
             );
           }}
         >
+          {isLoadingOlderHistory ? (
+            <div
+              role="status"
+              aria-live="polite"
+              style={{
+                alignSelf: 'center',
+                borderRadius: 999,
+                border: '1px solid #334155',
+                background: 'rgba(15, 23, 42, 0.88)',
+                color: '#cbd5e1',
+                fontSize: 12,
+                padding: '6px 10px',
+              }}
+            >
+              Loading older messages...
+            </div>
+          ) : null}
           <MessageList
             messages={visibleMessages}
             streamingPreview={streamingPreview}

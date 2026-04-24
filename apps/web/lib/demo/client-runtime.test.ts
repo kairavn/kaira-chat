@@ -311,4 +311,74 @@ describe('getOrCreateDemoClientRuntime', () => {
       runtime.sessionId,
     );
   });
+
+  it('loads paged message history with the session id and persists it to storage', async () => {
+    const olderMessage = {
+      id: 'older-1',
+      conversationId: 'conversation-1',
+      sender: {
+        id: 'assistant-1',
+        role: 'assistant',
+        displayName: 'Local Assistant',
+      },
+      timestamp: 1_710_000_000_000,
+      status: 'sent',
+      type: 'ai',
+      content: 'Older persisted reply.',
+      streamState: 'complete',
+    } satisfies Message;
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = getRequestUrl(input);
+
+        if (url.pathname === '/api/demos/next-backend/messages' && init?.method !== 'POST') {
+          expect(url.searchParams.get('conversationId')).toBe('conversation-1');
+          expect(url.searchParams.get('direction')).toBe('before');
+          expect(url.searchParams.get('cursor')).toBe('message-9');
+          expect(url.searchParams.get('limit')).toBe('8');
+          expect(url.searchParams.get('sessionId')).toBeTruthy();
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                items: [olderMessage],
+                hasMore: true,
+                nextCursor: olderMessage.id,
+              },
+            }),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              status: 200,
+            },
+          );
+        }
+
+        throw new Error(`Unhandled fetch request for ${url.toString()}`);
+      },
+    );
+    globalThis.fetch = fetchMock;
+
+    const runtime = createRuntime(`client-runtime-message-page-${crypto.randomUUID()}`);
+    runtimes.push(runtime);
+
+    const page = await runtime.loadMessagesPage('conversation-1', {
+      direction: 'before',
+      cursor: 'message-9',
+      limit: 8,
+    });
+    const storedMessages = await runtime.storage.getMessages({
+      conversationId: 'conversation-1',
+      direction: 'asc',
+    });
+
+    expect(page).toEqual({
+      items: [olderMessage],
+      hasMore: true,
+      nextCursor: olderMessage.id,
+    });
+    expect(storedMessages.items).toEqual([olderMessage]);
+  });
 });

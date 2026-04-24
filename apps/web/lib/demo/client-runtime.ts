@@ -4,6 +4,7 @@ import type {
   ChatError,
   ChatSerializer,
   Conversation,
+  CursorPage,
   ITransport,
   Message,
   Participant,
@@ -11,7 +12,12 @@ import type {
   TypingTransportPayload,
 } from '@kaira/chat-core';
 import type { DemoId } from '@/config/demo-registry';
-import type { DemoConversationBootstrap, DemoPollEventsResponse } from '@/lib/demo/contracts';
+import type {
+  DemoConversationBootstrap,
+  DemoMessagePageQuery,
+  DemoMessagesPage,
+  DemoPollEventsResponse,
+} from '@/lib/demo/contracts';
 
 import { ChatEngine, createChatError, ChatSerializer as Serializer } from '@kaira/chat-core';
 import { IndexedDBStorage } from '@kaira/chat-storage-indexeddb';
@@ -41,6 +47,7 @@ export interface DemoClientRuntime {
   setActiveConversationId(conversationId: string | null): void;
   bootstrapConversation(): Promise<DemoConversationBootstrap>;
   listConversations(): Promise<ReadonlyArray<Conversation>>;
+  loadMessagesPage(conversationId: string, query: DemoMessagePageQuery): Promise<DemoMessagesPage>;
   syncConversations(conversations: ReadonlyArray<Conversation>): Promise<void>;
 }
 
@@ -366,6 +373,45 @@ function parseConversationsResponse(value: unknown): ReadonlyArray<Conversation>
   });
 }
 
+function parseMessage(value: unknown, field: string): Message {
+  try {
+    return serializer.deserializeMessage(JSON.stringify(value));
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? `${field}: ${error.message}` : `${field} must be a message`,
+    );
+  }
+}
+
+function parseMessagesPageResponse(value: unknown): CursorPage<Message> {
+  return parseDemoRouteResponse(value, (data) => {
+    if (!isRecord(data)) {
+      throw new Error('Messages page payload must be an object');
+    }
+
+    const items = data['items'];
+    if (!Array.isArray(items)) {
+      throw new Error('Messages page items must be an array');
+    }
+
+    const hasMore = data['hasMore'];
+    if (typeof hasMore !== 'boolean') {
+      throw new Error('Messages page hasMore must be a boolean');
+    }
+
+    const nextCursor = data['nextCursor'];
+    if (nextCursor !== undefined && typeof nextCursor !== 'string') {
+      throw new Error('Messages page nextCursor must be a string when present');
+    }
+
+    return {
+      items: items.map((item, index) => parseMessage(item, `MessagesPage.items[${index}]`)),
+      hasMore,
+      ...(typeof nextCursor === 'string' ? { nextCursor } : {}),
+    };
+  });
+}
+
 function parseSendTypingResponse(value: unknown): SendTypingResponse {
   if (!isRecord(value) || typeof value['success'] !== 'boolean') {
     throw new Error('Typing response must include a boolean success field');
@@ -629,6 +675,30 @@ export function getOrCreateDemoClientRuntime(config: DemoClientRuntimeConfig): D
       const conversations = parseConversationsResponse(json);
       await runtime.syncConversations(conversations);
       return conversations;
+    },
+    async loadMessagesPage(
+      conversationId: string,
+      query: DemoMessagePageQuery,
+    ): Promise<DemoMessagesPage> {
+      const searchParams = new URLSearchParams({
+        conversationId,
+        direction: query.direction,
+        limit: String(query.limit),
+      });
+      if (query.cursor) {
+        searchParams.set('cursor', query.cursor);
+      }
+
+      const response = await fetch(
+        buildDemoRouteUrl(config.apiBasePath, 'messages', sessionId, searchParams),
+      );
+      if (!response.ok) {
+        throw new Error(`Message history page failed with status ${response.status}`);
+      }
+
+      const page = parseMessagesPageResponse(await response.json());
+      await Promise.all(page.items.map(async (message) => storage.saveMessage(message)));
+      return page;
     },
     async syncConversations(conversations: ReadonlyArray<Conversation>): Promise<void> {
       await Promise.all(

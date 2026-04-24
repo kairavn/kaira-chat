@@ -1,4 +1,4 @@
-import type { DemoSendMessageBody } from '@/lib/demo/contracts';
+import type { DemoMessagePageQuery, DemoSendMessageBody } from '@/lib/demo/contracts';
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -34,6 +34,30 @@ function isSendMessageBody(value: unknown): value is DemoSendMessageBody {
   );
 }
 
+function parseMessagePageQuery(searchParams: URLSearchParams): DemoMessagePageQuery | null {
+  const limitValue = searchParams.get('limit');
+  if (limitValue === null) {
+    return null;
+  }
+
+  const limit = Number(limitValue);
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error('limit must be a positive integer.');
+  }
+
+  const direction = searchParams.get('direction');
+  if (direction !== 'before' && direction !== 'after') {
+    throw new Error('direction must be "before" or "after" when limit is provided.');
+  }
+
+  const cursor = searchParams.get('cursor');
+  return {
+    direction,
+    limit,
+    ...(cursor ? { cursor } : {}),
+  };
+}
+
 export async function GET(request: NextRequest, context: DemoRouteContext): Promise<NextResponse> {
   const { demoId } = await context.params;
   if (!isDemoId(demoId)) {
@@ -57,6 +81,7 @@ export async function GET(request: NextRequest, context: DemoRouteContext): Prom
   }
 
   try {
+    const pageQuery = parseMessagePageQuery(request.nextUrl.searchParams);
     const runtime = getDemoRuntime(demoId);
     const availability = runtime.isAvailable();
     if (!availability.available) {
@@ -71,11 +96,14 @@ export async function GET(request: NextRequest, context: DemoRouteContext): Prom
 
     return NextResponse.json({
       success: true,
-      data: await runtime.getMessages(conversationId, requestContext),
+      data: pageQuery
+        ? await runtime.getMessagesPage(conversationId, pageQuery, requestContext)
+        : await runtime.getMessages(conversationId, requestContext),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown server error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    const status = message.includes('limit must') || message.includes('direction must') ? 400 : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 

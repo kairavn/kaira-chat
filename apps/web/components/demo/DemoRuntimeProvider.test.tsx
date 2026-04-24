@@ -377,6 +377,99 @@ describe('DemoRuntimeProvider', () => {
     });
   });
 
+  it('renders the initial demo history loading status before bootstrap completes', async () => {
+    const bootstrapConversation = createConversation();
+    let resolveConversation: ((response: Response) => void) | undefined;
+    const conversationPromise = new Promise<Response>((resolve) => {
+      resolveConversation = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+      const url = getRequestUrl(input);
+
+      if (url.pathname === '/api/demos/media/conversation') {
+        return conversationPromise;
+      }
+
+      if (url.pathname === '/api/demos/media/events') {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [],
+            nextCursor: 'cursor-1',
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        );
+      }
+
+      throw new Error(`Unhandled fetch request for ${url.toString()}`);
+    });
+    globalThis.fetch = fetchMock;
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+    HTMLElement.prototype.scrollTo = vi.fn();
+
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <DemoRuntimeProvider
+          demoId="media"
+          apiBasePath="/api/demos/media"
+          storageName={`demo-runtime-loading:${crypto.randomUUID()}`}
+          sender={{
+            id: 'media:user',
+            role: 'user',
+            displayName: 'SDK Explorer',
+          }}
+        >
+          <SingleConversationDemo
+            title="Renderer Demo"
+            description="Verify the demo runtime loading state."
+          />
+        </DemoRuntimeProvider>,
+      );
+    });
+
+    const loadingStatus = container.querySelector('[role="status"]');
+    expect(loadingStatus?.textContent).toBe('Loading demo history...');
+
+    await act(async () => {
+      resolveConversation?.(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              demoId: 'media',
+              conversation: bootstrapConversation,
+              conversationId: bootstrapConversation.id,
+            },
+          }),
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            status: 200,
+          },
+        ),
+      );
+      await conversationPromise;
+    });
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('textarea')).not.toBeNull();
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('sends only one streaming quick action request while a send is already in flight', async () => {
     const bootstrapConversation = createConversation();
     const sendDeferred = createDeferred();

@@ -13,6 +13,8 @@ import type { DemoAvailability } from '@/config/dit-demo';
 import type {
   DemoActionId,
   DemoConversationBootstrap,
+  DemoMessagePageQuery,
+  DemoMessagesPage,
   DemoPollEventsResponse,
 } from '@/lib/demo/contracts';
 
@@ -28,6 +30,7 @@ import {
 import {
   ensureDemoConversationCreated,
   getChatMessages,
+  getChatMessagesPage,
   getServerChatEngineContext,
   notifyChatTyping,
   sendChatMessage,
@@ -59,6 +62,11 @@ interface DemoServerRuntime {
     conversationId: string,
     requestContext?: DemoRuntimeRequestContext,
   ): Promise<ReadonlyArray<Message>>;
+  getMessagesPage(
+    conversationId: string,
+    query: DemoMessagePageQuery,
+    requestContext?: DemoRuntimeRequestContext,
+  ): Promise<DemoMessagesPage>;
   sendMessage(
     conversationId: string,
     text: string,
@@ -630,6 +638,15 @@ class DitDemoRuntime implements DemoServerRuntime {
     return getChatMessages(conversationId);
   }
 
+  async getMessagesPage(
+    conversationId: string,
+    query: DemoMessagePageQuery,
+    requestContext?: DemoRuntimeRequestContext,
+  ): Promise<DemoMessagesPage> {
+    void requestContext;
+    return getChatMessagesPage(conversationId, query);
+  }
+
   async sendMessage(
     conversationId: string,
     text: string,
@@ -718,6 +735,20 @@ class LocalDemoRuntime implements DemoServerRuntime {
     });
 
     return result.items;
+  }
+
+  async getMessagesPage(
+    conversationId: string,
+    query: DemoMessagePageQuery,
+    requestContext?: DemoRuntimeRequestContext,
+  ): Promise<DemoMessagesPage> {
+    const context = await this.getContext(requestContext);
+    return context.engine.getMessages({
+      conversationId,
+      direction: query.direction === 'before' ? 'desc' : 'asc',
+      cursor: query.cursor,
+      limit: query.limit,
+    });
   }
 
   async sendMessage(

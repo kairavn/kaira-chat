@@ -1,4 +1,10 @@
-import type { Conversation, MessageMetadata, TransportEvent } from '@kaira/chat-core';
+import type {
+  Conversation,
+  CursorPage,
+  Message,
+  MessageMetadata,
+  TransportEvent,
+} from '@kaira/chat-core';
 import type { DemoId } from '@/config/demo-registry';
 
 export interface DemoRouteSuccess<TData> {
@@ -48,6 +54,14 @@ export interface DemoSendMessageBody {
   readonly message: string;
   readonly metadata?: MessageMetadata;
 }
+
+export interface DemoMessagePageQuery {
+  readonly direction: 'before' | 'after';
+  readonly cursor?: string;
+  readonly limit: number;
+}
+
+export type DemoMessagesPage = CursorPage<Message>;
 
 export interface DemoTypingBody {
   readonly action: 'start' | 'stop';

@@ -1,7 +1,8 @@
-import type { ChatEvent, Message, MessageMetadata } from '@kaira/chat-core';
+import type { ChatEvent, CursorPage, Message, MessageMetadata } from '@kaira/chat-core';
+import type { DemoMessagePageQuery } from '@/lib/demo/contracts';
 
 import { ChatEngine } from '@kaira/chat-core';
-import { DitTransport } from '@kaira/chat-provider-dit';
+import { DitTransport, fetchDitHistoryPage } from '@kaira/chat-provider-dit';
 
 import { publishChatEvent } from './event-broker';
 import { getChatDemoAvailability, getChatDemoConfig } from './server-config';
@@ -28,6 +29,8 @@ async function buildContext(): Promise<ServerChatEngineContext> {
     chatroomId: config.chatroomId,
     senderId: config.senderId,
     chatbotNickname: config.chatbotNickname,
+    initialHistoryLimit: 8,
+    initialBackfillPageCount: 1,
     send: {
       apiId: config.apiId,
       sessionId: config.sessionId,
@@ -138,6 +141,30 @@ export async function getChatMessages(conversationId: string): Promise<ReadonlyA
     limit: CHAT_HISTORY_LIMIT,
   });
   return result.items;
+}
+
+export async function getChatMessagesPage(
+  conversationId: string,
+  query: DemoMessagePageQuery,
+): Promise<CursorPage<Message>> {
+  const config = getChatDemoConfig();
+  if (conversationId !== config.chatroomId) {
+    return {
+      items: [],
+      hasMore: false,
+    };
+  }
+
+  return fetchDitHistoryPage(
+    {
+      apiUrl: config.apiUrl,
+      apiKey: config.apiKey,
+      chatroomId: config.chatroomId,
+      senderId: config.senderId,
+      chatbotNickname: config.chatbotNickname,
+    },
+    query,
+  );
 }
 
 export async function listChatConversations(): Promise<ReadonlyArray<{ readonly id: string }>> {
