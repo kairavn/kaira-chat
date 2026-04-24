@@ -1,5 +1,7 @@
 import type { MDXComponents } from 'mdx/types';
 
+import Link from 'next/link';
+
 import { Badge } from '@/components/docs/badge';
 import { Callout } from '@/components/docs/callout';
 import { Card, CardGroup } from '@/components/docs/card';
@@ -12,6 +14,9 @@ import { Tab, Tabs, TabsList } from '@/components/docs/tabs';
 // transforms them into figure[data-rehype-pretty-code-figure] elements
 // with proper Shiki syntax highlighting. The CSS in globals.css handles
 // styling for those transformed blocks.
+
+const isInternalPathHref = (href: string): boolean =>
+  href.startsWith('/') && !href.startsWith('//');
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
@@ -67,6 +72,27 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
     // Note: Shiki-processed code blocks are handled by CSS.
     // We don't override pre/code to avoid conflicts.
+    a: ({ children, href, ...props }) => {
+      if (typeof href === 'string' && isInternalPathHref(href)) {
+        return (
+          <Link
+            href={href}
+            {...props}
+          >
+            {children}
+          </Link>
+        );
+      }
+
+      return (
+        <a
+          href={href}
+          {...props}
+        >
+          {children}
+        </a>
+      );
+    },
 
     // Custom MDX components
     Callout,

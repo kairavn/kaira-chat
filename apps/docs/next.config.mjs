@@ -1,8 +1,35 @@
 import createMDX from '@next/mdx';
 
-const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-const normalizedBasePath = rawBasePath.endsWith('/') ? rawBasePath.slice(0, -1) : rawBasePath;
-const basePath = normalizedBasePath.length > 0 ? normalizedBasePath : undefined;
+const normalizeBasePath = (value) => {
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.length === 0 || trimmedValue === '/') {
+    return undefined;
+  }
+
+  const leadingSlashValue = trimmedValue.startsWith('/') ? trimmedValue : `/${trimmedValue}`;
+  const normalizedValue = leadingSlashValue.endsWith('/')
+    ? leadingSlashValue.slice(0, -1)
+    : leadingSlashValue;
+
+  return normalizedValue.length > 0 ? normalizedValue : undefined;
+};
+
+const getBasePathFromDocsUrl = (value) => {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    return normalizeBasePath(new URL(value).pathname);
+  } catch {
+    return undefined;
+  }
+};
+
+const basePath =
+  normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH ?? '') ??
+  getBasePathFromDocsUrl(process.env.NEXT_PUBLIC_DOCS_BASE_URL);
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {

@@ -52,7 +52,8 @@ Required shared demo identifiers used by both browser and server:
 
 Docs app config:
 
-- `apps/docs` supports optional `NEXT_PUBLIC_BASE_PATH` for GitHub Pages export
+- `apps/docs` supports optional `NEXT_PUBLIC_BASE_PATH` for the Next.js `basePath`, defaulting to empty for local dev
+- `apps/docs` supports optional `NEXT_PUBLIC_DOCS_BASE_URL` for the full public docs URL; if `NEXT_PUBLIC_BASE_PATH` is not set, the docs app derives the `basePath` from this URL pathname
 - see `apps/docs/next.config.mjs`
 
 Turbo environment passthrough is defined in `turbo.json` for:
@@ -62,6 +63,7 @@ Turbo environment passthrough is defined in `turbo.json` for:
 - `X_API_KEY`
 - `X_API_ID`
 - `NEXT_PUBLIC_BASE_PATH`
+- `NEXT_PUBLIC_DOCS_BASE_URL`
 - `NEXT_PUBLIC_DEMO_SESSION_ID`
 - `NEXT_PUBLIC_DEMO_SENDER_ID`
 - `NEXT_PUBLIC_DEMO_CHATBOT_NICKNAME`

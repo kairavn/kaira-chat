@@ -10,16 +10,29 @@ import { ThemeProvider } from '@/components/docs/theme-provider';
 
 import './globals.css';
 
+const getDocsMetadataBase = (): URL | undefined => {
+  const docsBaseUrl = process.env.NEXT_PUBLIC_DOCS_BASE_URL;
+
+  if (!docsBaseUrl) {
+    return undefined;
+  }
+
+  try {
+    return new URL(docsBaseUrl.endsWith('/') ? docsBaseUrl : `${docsBaseUrl}/`);
+  } catch {
+    return undefined;
+  }
+};
+
+const docsMetadataBase = getDocsMetadataBase();
+
 export const metadata: Metadata = {
+  ...(docsMetadataBase ? { metadataBase: docsMetadataBase } : {}),
   title: {
     default: 'Kaira Chat SDK Documentation',
     template: '%s | Kaira Chat SDK',
   },
   description: 'Developer documentation for the modular Kaira Chat SDK.',
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
-  },
 };
 
 /**

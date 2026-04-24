@@ -61,7 +61,7 @@ Notes:
 ## Release and deployment reality
 
 - CI validation is active in `.github/workflows/ci.yml` and runs `pnpm validate` on pull requests and pushes to `main`.
-- Consumer docs deployment is active in `.github/workflows/deploy-docs-pages.yml` and publishes `apps/docs` to GitHub Pages.
+- Consumer docs deployment is active in `.github/workflows/deploy-docs-pages.yml` and publishes `apps/docs` to GitHub Pages with `NEXT_PUBLIC_BASE_PATH` and `NEXT_PUBLIC_DOCS_BASE_URL` set for the repository subpath.
 - Changesets is configured in `.changeset/config.json`.
 - The checked-in release workflow is not currently live as written. `release.yml` only triggers on `workflow_dispatch`, while its publish job is guarded by `if: github.event_name == 'push' && github.ref == 'refs/heads/main'`.
 

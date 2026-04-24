@@ -3,6 +3,7 @@
 import type { JSX } from 'react';
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -56,7 +57,7 @@ export default function Error({
         </Button>
 
         <Button asChild>
-          <a href="/">Go home</a>
+          <Link href="/">Go home</Link>
         </Button>
       </div>
     </div>

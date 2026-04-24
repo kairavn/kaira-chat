@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { JSX } from 'react';
 
 import { FileQuestion, Home, Search } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 
@@ -40,20 +41,20 @@ export default function NotFound(): JSX.Element {
           variant="outline"
           className="gap-2"
         >
-          <a href="/">
+          <Link href="/">
             <Home className="h-4 w-4" />
             Go home
-          </a>
+          </Link>
         </Button>
 
         <Button
           asChild
           className="gap-2"
         >
-          <a href="/">
+          <Link href="/">
             <Search className="h-4 w-4" />
             Search docs
-          </a>
+          </Link>
         </Button>
       </div>
 
@@ -62,13 +63,13 @@ export default function NotFound(): JSX.Element {
         <ul className="space-y-2">
           {suggestedPages.map((page) => (
             <li key={page.href}>
-              <a
+              <Link
                 href={page.href}
                 className="hover:bg-accent flex items-center justify-between rounded-lg border p-3 text-sm transition-colors"
               >
                 <span>{page.title}</span>
                 <span className="text-muted-foreground">→</span>
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
