@@ -42,3 +42,8 @@ interface IndexedDBStorageOptions {
   readonly onError?: (error: Error) => void;
 }
 ```
+
+## Documentation
+
+- [Storage API](../../apps/docs/app/storage/page.mdx)
+- [Persistence demo](../../apps/web/README.md)

@@ -25,5 +25,6 @@ const transport = new PollingTransport({
 
 ## Documentation
 
-- [Project docs](https://github.com/Kaira/chat-core)
-- [Examples](https://github.com/Kaira/chat-core/tree/main/apps)
+- [Transport API](../../apps/docs/app/transport/page.mdx)
+- [Quick start](../../apps/docs/app/quick-start/page.mdx)
+- [Examples](../../apps/docs/app/examples/page.mdx)

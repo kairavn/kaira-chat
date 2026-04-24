@@ -139,5 +139,6 @@ for message and typing traffic over a demo-only sibling-port WebSocket bridge.
 
 ## Documentation
 
-- [Transport docs](https://github.com/Kaira/chat-core/tree/main/apps/docs/app/transport/page.mdx)
-- [Examples](https://github.com/Kaira/chat-core/tree/main/apps/docs/app/examples/page.mdx)
+- [Transport API](../../apps/docs/app/transport/page.mdx)
+- [Examples](../../apps/docs/app/examples/page.mdx)
+- [Internal demo app](../../apps/web/README.md)

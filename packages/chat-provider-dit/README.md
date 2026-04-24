@@ -34,5 +34,6 @@ const transport = new DitTransport({
 
 ## Documentation
 
-- [Project docs](https://github.com/Kaira/chat-core)
-- [Examples](https://github.com/Kaira/chat-core/tree/main/apps)
+- [Transport API](../../apps/docs/app/transport/page.mdx)
+- [Examples](../../apps/docs/app/examples/page.mdx)
+- [Internal demo app](../../apps/web/README.md)

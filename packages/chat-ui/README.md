@@ -74,6 +74,8 @@ The package also exports typed content components that you can use directly:
 - `AudioMessageContent`
 - `VideoMessageContent`
 - `LocationMessageContent`
+- `ThinkingIndicator`
+- `TypingIndicator`
 - `UnsupportedMessageContent`
 
 ## Overriding a Built-in Renderer
@@ -104,5 +106,6 @@ registry.register({
 
 ## Documentation
 
-- [Project docs](https://github.com/Kaira/chat-core)
-- [Examples](https://github.com/Kaira/chat-core/tree/main/apps)
+- [UI components](../../apps/docs/app/ui/page.mdx)
+- [React integration](../../apps/docs/app/react/page.mdx)
+- [Examples](../../apps/docs/app/examples/page.mdx)

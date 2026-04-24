@@ -38,10 +38,20 @@ engine.stopTyping('demo-room');
 Typing support over transports is optional. Local typing state still updates even when the
 active transport does not advertise typing capability.
 
+Additional runtime helpers:
+
+- `getCurrentParticipant()`
+- `supportsTyping()`
+- `emitStreamStart(messageId, conversationId)`
+- `emitStreamChunk(messageId, chunk, accumulated)`
+- `emitStreamEnd(message)`
+- `emitStreamError(messageId, conversationId, error)`
+
 Provider-specific transcript payloads should use `custom` messages. Built-in SDK defaults do not
 include tool invocation transcript semantics.
 
 ## Documentation
 
-- [Project docs](https://github.com/Kaira/chat-core)
-- [Examples](https://github.com/Kaira/chat-core/tree/main/apps)
+- [Core API](../../apps/docs/app/core-api/page.mdx)
+- [Events](../../apps/docs/app/events/page.mdx)
+- [Examples](../../apps/docs/app/examples/page.mdx)

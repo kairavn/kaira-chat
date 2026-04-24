@@ -14,7 +14,7 @@ This file captures the current repo workflow as reflected by checked-in scripts 
 | `pnpm docs:status:check` | verifies generated status docs are in sync                                | suitable for local verification and CI-style checks                      |
 | `pnpm lint`              | `turbo run lint`                                                          | repo-wide lint path                                                      |
 | `pnpm check-types`       | `turbo run check-types`                                                   | repo-wide typecheck path                                                 |
-| `pnpm test`              | `turbo run test`                                                          | package tests only; several workspaces currently have no tests           |
+| `pnpm test`              | `pnpm test:scripts && turbo run test`                                     | repo script tests plus workspace tests where a test script exists        |
 | `pnpm build`             | `turbo run build`                                                         | builds packages and both apps                                            |
 | `pnpm validate`          | `deps:check && docs:status:check && lint && check-types && build && test` | current CI-quality validation gate                                       |
 

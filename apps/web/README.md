@@ -88,7 +88,8 @@ Local demos use a server-owned `ChatEngine` plus route handlers to simulate
 realistic chat behavior. `next-backend`, `streaming`, and `media` now expose
 deterministic quick actions so specific backend and renderer paths can be
 verified without relying on prompt parsing alone. Stream-capable demos still
-bridge `message:stream:*` events into the browser through the demo SSE route,
+bridge `message:stream:start`, `message:stream:chunk`, `message:stream:end`,
+and `message:stream:error` events into the browser through the demo SSE route,
 but the final assistant reply also lands through the normal message transport.
 `DemoRuntimeProvider` now remounts its provider instance when the derived
 runtime key changes, which keeps an existing demo runtime stable across normal
@@ -116,7 +117,7 @@ apps/web/
 | Package                           | Role                             |
 | --------------------------------- | -------------------------------- |
 | `@kaira/chat-core`                | Core chat engine and event types |
-| `@kaira/chat-react`               | React hooks (`useChat`, etc.)    |
+| `@kaira/chat-react`               | React provider and focused hooks |
 | `@kaira/chat-ui`                  | Pre-built UI components          |
 | `@kaira/chat-devtools`            | Debug overlay (dev mode only)    |
 | `@kaira/chat-transport-websocket` | Generic WebSocket transport      |

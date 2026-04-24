@@ -2,6 +2,8 @@
 
 Developer tooling for inspecting Kaira Chat runtime state.
 
+DevTools render in development mode only. In production, `ChatDevTools` returns `null`.
+
 ## Installation
 
 ```bash
@@ -28,5 +30,6 @@ export function DebugPanel(): JSX.Element {
 
 ## Documentation
 
-- [Project docs](https://github.com/Kaira/chat-core)
-- [Examples](https://github.com/Kaira/chat-core/tree/main/apps)
+- [DevTools docs](../../apps/docs/app/devtools/page.mdx)
+- [React integration](../../apps/docs/app/react/page.mdx)
+- [Examples](../../apps/docs/app/examples/page.mdx)

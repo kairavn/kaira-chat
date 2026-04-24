@@ -1,7 +1,7 @@
 {
   "meta": {
     "canonicalVersion": 1,
-    "generatedAt": "2026-04-16",
+    "generatedAt": "2026-04-24",
     "sourceOfTruth": "docs/internal/feature-status.json",
     "generatedOutputs": [
       "docs/internal/IMPLEMENTATION_STATUS.md",
@@ -345,10 +345,10 @@
       "evidence": [
         "packages/chat-devtools/src/ChatDevTools.tsx",
         "packages/chat-devtools/src/useChatDevTools.ts",
-        "packages/chat-devtools/src/index.ts"
+        "packages/chat-devtools/src/useChatDevTools.test.tsx"
       ],
-      "notes": "Runtime inspection UI is implemented, but automated coverage is absent.",
-      "roadmapCandidate": true
+      "notes": "Runtime inspection UI and state capture hooks are implemented and covered by focused tests for event buffering, engine-swap resets, stream snapshots, and panel rendering.",
+      "roadmapCandidate": false
     },
     {
       "id": "demo-browser-runtime",

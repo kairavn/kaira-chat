@@ -183,7 +183,7 @@ Deliverables:
 
 - harden the streaming story around the existing helper-driven model instead of inventing provider-first abstractions
 - add source-backed guidance or reference implementation patterns for emitting `message:stream:*` events from first-party integrations
-- add missing automated coverage for the public devtools panel, not just its internal state hooks
+- expand automated coverage for the public devtools panel beyond the current focused rendering and state-capture tests
 - verify the streaming and devtools stories against the current local demo surfaces without treating `apps/web` as a public API
 
 Scope note:
@@ -203,7 +203,7 @@ Affected areas:
 Acceptance criteria:
 
 - streaming guidance is backed by code, tests, or both rather than docs-only recommendations
-- public devtools rendering behavior has automated coverage
+- public devtools rendering behavior has expanded coverage for the hardening scenarios selected in this phase
 - the repo can validate stream lifecycle behavior without depending on undocumented demo-only guarantees
 - no new provider abstraction is introduced to solve streaming in this phase
 
@@ -220,7 +220,7 @@ Milestone deliverables at completion:
 Follow-on hardening deliverables, if Phase 4 is pulled into scope:
 
 - stronger streaming implementation guidance backed by code and tests
-- automated coverage for the public devtools panel
+- expanded automated coverage for public devtools hardening scenarios
 
 ## Not in This Milestone
 
@@ -264,7 +264,7 @@ The milestone is complete when all of the following are true:
 If Phase 4 is explicitly pulled into scope, the following additional conditions apply:
 
 - streaming guidance is implemented in a way that matches the current transport-first architecture
-- the public devtools panel has automated coverage
+- the public devtools panel has expanded hardening coverage beyond the current focused tests
 
 ## Expected Implementation Hotspots
 
