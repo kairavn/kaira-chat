@@ -74,13 +74,13 @@ Turbo environment passthrough is defined in `turbo.json` for:
 - CI validation is active in `.github/workflows/ci.yml`
 - Docs deployment is active in `.github/workflows/deploy-docs-pages.yml`
 - Changesets config is active in `.changeset/config.json`
-- Release automation is not currently live as checked in because `.github/workflows/release.yml` only triggers on `workflow_dispatch`, while the publish job only runs for a `push` event on `main`
+- Release automation is active in `.github/workflows/release.yml`; pull requests run `pnpm changeset:status`, and pushes to `main` run the Changesets release job
+- npm publishing requires the `NPM_TOKEN` repository secret; Changesets remains the only checked-in package release mechanism
 
 ## Incomplete or ambiguous areas
 
 - `apps/docs/lib/search-data.ts` is a committed generated artifact, but there is no root script dedicated to regenerating it
 - `apps/web` includes polling plus demo-scoped SSE for stream lifecycle updates, and the DIT-backed path remains polling-first
-- The repo contains release configuration, but not a currently active publish workflow
 - Package and app README examples can drift from source exports and current runtime wiring
 - The repo now runs on Vitest 4, so older Jest-style flags such as `--runInBand` are no longer valid; prefer file filters or Vitest's own parallelism flags
 

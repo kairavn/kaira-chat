@@ -79,7 +79,7 @@ This is the canonical human-readable status view for the repo. Use source code, 
 | Internal feature status system | `internal-docs` | docs/internal | no | `implemented` | `concrete` | `docs/internal/feature-status.json`<br>`docs/internal/IMPLEMENTATION_STATUS.md`<br>`scripts/render-feature-status.mjs` | The canonical source lives in JSON and generates the markdown views to reduce drift between status documents. | no |
 | CI validate workflow | `tooling-release` | root workflows | no | `implemented` | `workflow-only` | `.github/workflows/ci.yml`<br>`package.json`<br>`turbo.json` | CI runs the repo-native validate command on pull requests and pushes to main. | no |
 | Docs deployment workflow | `tooling-release` | root workflows | no | `implemented` | `workflow-only` | `.github/workflows/deploy-docs-pages.yml`<br>`apps/docs/next.config.mjs` | GitHub Pages deployment for apps/docs is active and source-backed. | no |
-| Package release automation | `tooling-release` | root workflows | no | `partial` | `workflow-only` | `.github/workflows/release.yml`<br>`.changeset/config.json`<br>`package.json` | Changesets configuration exists, but the checked-in release workflow does not currently run its publish path because the trigger and job guard do not line up. | yes |
+| Package release automation | `tooling-release` | root workflows | no | `implemented` | `workflow-only` | `.github/workflows/release.yml`<br>`.changeset/config.json`<br>`package.json` | Changesets release automation is active for pull requests and pushes to main; pull requests run the Changesets status check, and pushes to main run the release job that creates version PRs or publishes with the configured npm token. | no |
 
 ## Testing
 

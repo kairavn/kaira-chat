@@ -553,11 +553,11 @@
       "surfaceType": "tooling-release",
       "ownerArea": "root workflows",
       "publicSurface": false,
-      "status": "partial",
+      "status": "implemented",
       "backing": "workflow-only",
       "evidence": [".github/workflows/release.yml", ".changeset/config.json", "package.json"],
-      "notes": "Changesets configuration exists, but the checked-in release workflow does not currently run its publish path because the trigger and job guard do not line up.",
-      "roadmapCandidate": true
+      "notes": "Changesets release automation is active for pull requests and pushes to main; pull requests run the Changesets status check, and pushes to main run the release job that creates version PRs or publishes with the configured npm token.",
+      "roadmapCandidate": false
     },
     {
       "id": "chat-core-tests",

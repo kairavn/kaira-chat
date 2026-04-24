@@ -1,14 +1,21 @@
 name: Release
 
 on:
-  workflow_dispatch: # disabled — uncomment push/pull_request triggers to re-enable
-  # push:
-  #   branches:
-  #     - main
-  # pull_request:
+  pull_request:
+  push:
+    branches:
+      - main
+    paths:
+      - '.changeset/**'
+      - 'packages/**/CHANGELOG.md'
+      - 'packages/**/package.json'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
 
 concurrency:
-  group: release
+  group: release-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -16,6 +23,9 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -31,7 +41,6 @@ jobs:
           node-version: 'lts/*'
           check-latest: true
           cache: pnpm
-          # TODO: add NPM_TOKEN secret in repo settings
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
@@ -49,6 +58,7 @@ jobs:
           title: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   changeset-status:

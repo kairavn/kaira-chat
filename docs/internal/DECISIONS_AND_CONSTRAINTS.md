@@ -30,7 +30,7 @@ This file records important implementation choices and limits that are visible i
 - `apps/docs` is authored documentation, not a generated API reference from source code. Evidence: `apps/docs/app/**/*.mdx`.
 - `apps/docs/lib/search-data.ts` is a committed generated artifact derived from manual docs content. Evidence: `apps/docs/lib/generate-search-data.ts`, `apps/docs/lib/search-data.ts`.
 - Manual docs can drift from code. That risk applies to `apps/docs`, package READMEs, and internal docs. Code, config, and tests should stay primary.
-- Release automation is configured but not currently live as checked in. Evidence: `.github/workflows/release.yml`, `.changeset/config.json`.
+- Release automation is active through Changesets on pull requests and pushes to `main`; npm publishing requires the `NPM_TOKEN` repository secret. Evidence: `.github/workflows/release.yml`, `.changeset/config.json`.
 
 ## Inferred constraints
 

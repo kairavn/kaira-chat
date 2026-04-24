@@ -63,9 +63,9 @@ Notes:
 - CI validation is active in `.github/workflows/ci.yml` and runs `pnpm validate` on pull requests and pushes to `main`.
 - Consumer docs deployment is active in `.github/workflows/deploy-docs-pages.yml` and publishes `apps/docs` to GitHub Pages with `NEXT_PUBLIC_BASE_PATH` and `NEXT_PUBLIC_DOCS_BASE_URL` set for the repository subpath.
 - Changesets is configured in `.changeset/config.json`.
-- The checked-in release workflow is not currently live as written. `release.yml` only triggers on `workflow_dispatch`, while its publish job is guarded by `if: github.event_name == 'push' && github.ref == 'refs/heads/main'`.
+- Package release automation is active in `.github/workflows/release.yml`. Pull requests run the Changesets status check, and pushes to `main` run the Changesets release job.
 
-Treat package versioning and publish flow as configured-but-inactive automation unless the workflow is updated.
+Publishing to npm requires the `NPM_TOKEN` repository secret. Changesets remains the only checked-in package versioning and publish mechanism.
 
 ## Changesets
 
@@ -83,7 +83,7 @@ pnpm changeset:version
 pnpm changeset:publish
 ```
 
-Only use these when release work is actually intended. The current repo state does not provide an always-on publish workflow.
+Only use these when release work is actually intended. The checked-in release workflow uses these Changesets commands for versioning and publishing.
 
 ## Dependency management
 
