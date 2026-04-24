@@ -1,6 +1,6 @@
 {
   "name": "@kaira/chat-transport-polling",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Polling transport implementation for Kaira Chat SDK",
   "type": "module",
   "main": "./dist/index.cjs",

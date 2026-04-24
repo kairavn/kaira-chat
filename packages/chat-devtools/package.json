@@ -1,6 +1,6 @@
 {
   "name": "@kaira/chat-devtools",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Developer tools for Kaira Chat SDK",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -34,7 +34,7 @@
     "test:watch": "vitest --config vitest.config.ts"
   },
   "peerDependencies": {
-    "@kaira/chat-react": ">=0.1.0",
+    "@kaira/chat-react": ">=0.2.0",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   },
