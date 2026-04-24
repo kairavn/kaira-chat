@@ -41,6 +41,12 @@ interface PendingHistoryRestore {
   readonly previousScrollTop: number;
 }
 
+interface VisibleMessageCountState {
+  readonly conversationId: string;
+  readonly initialVisibleMessageCount: number;
+  readonly count: number;
+}
+
 interface ChatSurfaceProps {
   readonly title: string;
   readonly description: string;
@@ -48,6 +54,66 @@ interface ChatSurfaceProps {
   readonly quickActions?: ReadonlyArray<DemoQuickAction>;
   readonly helperPanel?: ReactNode;
   readonly historyWindow?: ChatSurfaceHistoryWindow;
+}
+
+function scopedVisibleMessageCount(
+  conversationId: string,
+  initialVisibleMessageCount: number,
+  count: number,
+): VisibleMessageCountState {
+  return {
+    conversationId,
+    initialVisibleMessageCount,
+    count,
+  };
+}
+
+function getVisibleMessageCount(
+  state: VisibleMessageCountState,
+  conversationId: string,
+  initialVisibleMessageCount: number,
+): number {
+  return state.conversationId === conversationId &&
+    state.initialVisibleMessageCount === initialVisibleMessageCount
+    ? state.count
+    : initialVisibleMessageCount;
+}
+
+function createOptimisticTextMessage({
+  conversationId,
+  content,
+  metadata,
+  sender,
+}: {
+  readonly conversationId: string;
+  readonly content: string;
+  readonly metadata?: MessageMetadata;
+  readonly sender: Message['sender'];
+}): {
+  readonly messageMetadata: MessageMetadata;
+  readonly nonce: string;
+  readonly optimisticMessage: Message;
+} {
+  const nonce = `nonce-${crypto.randomUUID()}`;
+  const messageMetadata = {
+    ...(metadata ?? {}),
+    clientNonce: nonce,
+  } satisfies MessageMetadata;
+
+  return {
+    messageMetadata,
+    nonce,
+    optimisticMessage: {
+      id: `optimistic-${nonce}`,
+      conversationId,
+      sender,
+      timestamp: Date.now(),
+      status: 'pending',
+      type: 'text',
+      content,
+      metadata: messageMetadata,
+    },
+  };
 }
 
 export function ChatSurface({
@@ -86,28 +152,36 @@ export function ChatSurface({
 
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
+  const [thinkingConversationId, setThinkingConversationId] = useState<string | null>(null);
   const hasHistoryWindow = historyWindow !== undefined;
   const initialVisibleMessageCount = historyWindow?.initialVisibleCount ?? 0;
-  const [visibleMessageCount, setVisibleMessageCount] = useState<number>(
+  const [visibleMessageCount, setVisibleMessageCount] = useState<VisibleMessageCountState>(() =>
+    scopedVisibleMessageCount(
+      conversationId,
+      initialVisibleMessageCount,
+      initialVisibleMessageCount,
+    ),
+  );
+  const currentVisibleMessageCount = getVisibleMessageCount(
+    visibleMessageCount,
+    conversationId,
     initialVisibleMessageCount,
   );
+  const isThinking = thinkingConversationId === conversationId;
   const visibleMessages = historyWindow
-    ? mergedMessages.slice(-Math.max(visibleMessageCount, initialVisibleMessageCount))
+    ? mergedMessages.slice(-Math.max(currentVisibleMessageCount, initialVisibleMessageCount))
     : mergedMessages;
   const hasHiddenHistory = historyWindow ? visibleMessages.length < mergedMessages.length : false;
 
   useEffect(() => {
-    if (!hasHistoryWindow) {
-      return;
-    }
-
-    setVisibleMessageCount(initialVisibleMessageCount);
     pendingHistoryRestoreRef.current = null;
     pendingAssistantMessageIdsRef.current = null;
     shouldAutoScrollRef.current = true;
     lastScrollTopRef.current = 0;
-    setIsThinking(false);
+
+    const animationFrame = requestAnimationFrame(() => setThinkingConversationId(null));
+
+    return () => cancelAnimationFrame(animationFrame);
   }, [conversationId, hasHistoryWindow, initialVisibleMessageCount]);
 
   useEffect(() => {
@@ -127,8 +201,12 @@ export function ChatSurface({
       return;
     }
 
-    setIsThinking(false);
-  }, [isStreaming, isThinking]);
+    const animationFrame = requestAnimationFrame(() =>
+      setThinkingConversationId((current) => (current === conversationId ? null : current)),
+    );
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [conversationId, isStreaming, isThinking]);
 
   useEffect(() => {
     if (!isThinking) {
@@ -152,12 +230,11 @@ export function ChatSurface({
     }
 
     pendingAssistantMessageIdsRef.current = null;
-    setIsThinking(false);
-    window.requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setThinkingConversationId((current) => (current === conversationId ? null : current));
+
       const container = scrollRef.current;
-      if (!container) {
-        return;
-      }
+      if (!container) return;
 
       const selectorMessageId =
         typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
@@ -171,7 +248,7 @@ export function ChatSurface({
         block: 'nearest',
       });
     });
-  }, [isThinking, mergedMessages]);
+  }, [conversationId, isThinking, mergedMessages]);
 
   useEffect(() => {
     if (!isThinking) {
@@ -180,7 +257,7 @@ export function ChatSurface({
 
     const timer = window.setTimeout(() => {
       pendingAssistantMessageIdsRef.current = null;
-      setIsThinking(false);
+      setThinkingConversationId(null);
       setError('AI response timed out. Please try again.');
     }, AI_THINKING_TIMEOUT_MS);
 
@@ -235,22 +312,12 @@ export function ChatSurface({
     }
 
     const currentParticipant = engine.getCurrentParticipant();
-    const nonce = `nonce-${crypto.randomUUID()}`;
-    const optimisticTimestamp = Date.now();
-    const messageMetadata = {
-      ...(metadata ?? {}),
-      clientNonce: nonce,
-    } satisfies MessageMetadata;
-    const optimisticMessage: Message = {
-      id: `optimistic-${nonce}`,
+    const { messageMetadata, nonce, optimisticMessage } = createOptimisticTextMessage({
       conversationId,
       sender: currentParticipant,
-      timestamp: optimisticTimestamp,
-      status: 'pending',
-      type: 'text',
       content,
-      metadata: messageMetadata,
-    };
+      metadata,
+    });
 
     addOptimisticMessage(optimisticMessage, nonce);
     activeOptimisticNoncesRef.current.add(nonce);
@@ -261,7 +328,7 @@ export function ChatSurface({
     );
     setError(null);
     stopTyping();
-    setIsThinking(true);
+    setThinkingConversationId(conversationId);
     isSendingRef.current = true;
     setIsSending(true);
 
@@ -283,7 +350,7 @@ export function ChatSurface({
       activeOptimisticNoncesRef.current.delete(nonce);
       pendingAssistantMessageIdsRef.current = null;
       removeOptimisticMessage(nonce);
-      setIsThinking(false);
+      setThinkingConversationId(null);
       setError(sendError instanceof Error ? sendError.message : 'Failed to send message');
     } finally {
       isSendingRef.current = false;
@@ -359,7 +426,14 @@ export function ChatSurface({
               previousScrollHeight: element.scrollHeight,
               previousScrollTop: element.scrollTop,
             };
-            setVisibleMessageCount((current) => current + historyWindow.incrementCount);
+            setVisibleMessageCount((current) =>
+              scopedVisibleMessageCount(
+                conversationId,
+                initialVisibleMessageCount,
+                getVisibleMessageCount(current, conversationId, initialVisibleMessageCount) +
+                  historyWindow.incrementCount,
+              ),
+            );
           }}
         >
           <MessageList

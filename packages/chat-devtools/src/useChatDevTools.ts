@@ -27,8 +27,23 @@ interface EventAccumulator {
   readonly nextId: number;
 }
 
+interface EngineScopedValue<T> {
+  readonly engine: IChatEngine;
+  readonly value: T;
+}
+
 interface UseChatDevToolsOptions {
   readonly maxEvents?: number;
+}
+
+const EMPTY_EVENTS: EventAccumulator = { events: [], nextId: 1 };
+
+function scopeToEngine<T>(engine: IChatEngine, value: T): EngineScopedValue<T> {
+  return { engine, value };
+}
+
+function scopedValue<T>(scoped: EngineScopedValue<T>, engine: IChatEngine, fallback: T): T {
+  return scoped.engine === engine ? scoped.value : fallback;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -259,44 +274,48 @@ export function useChatDevTools(
 ): ChatDevToolsState {
   const maxEvents = options.maxEvents ?? DEFAULT_EVENT_RING_BUFFER_SIZE;
 
-  const [connectionState, setConnectionState] = useState<ConnectionState>(
-    engine.getConnectionState(),
+  const [connectionState, setConnectionState] = useState<EngineScopedValue<ConnectionState>>(() =>
+    scopeToEngine(engine, engine.getConnectionState()),
   );
-  const [events, setEvents] = useState<EventAccumulator>({ events: [], nextId: 1 });
-  const [messages, setMessages] = useState<ReadonlyArray<Message>>([]);
-  const [conversations, setConversations] = useState<ReadonlyArray<Conversation>>([]);
-  const [streams, setStreams] = useState<ReadonlyArray<StreamSnapshot>>([]);
-  const [lastNetworkEvent, setLastNetworkEvent] = useState<string | undefined>(undefined);
-  const [middlewareFlows, setMiddlewareFlows] = useState<ReadonlyArray<MiddlewareFlowEntry>>([]);
-  const [plugins, setPlugins] = useState<ReadonlyArray<PluginSnapshot>>(() =>
-    initializePlugins(engine, engine.getConnectionState()),
+  const [events, setEvents] = useState<EngineScopedValue<EventAccumulator>>(() =>
+    scopeToEngine(engine, EMPTY_EVENTS),
   );
-
-  useEffect(() => {
-    setConnectionState(engine.getConnectionState());
-    setEvents({ events: [], nextId: 1 });
-    setMessages([]);
-    setConversations([]);
-    setStreams([]);
-    setLastNetworkEvent(undefined);
-    setMiddlewareFlows([]);
-    setPlugins(initializePlugins(engine, engine.getConnectionState()));
-  }, [engine]);
+  const [messages, setMessages] = useState<EngineScopedValue<ReadonlyArray<Message>>>(() =>
+    scopeToEngine(engine, []),
+  );
+  const [conversations, setConversations] = useState<
+    EngineScopedValue<ReadonlyArray<Conversation>>
+  >(() => scopeToEngine(engine, []));
+  const [streams, setStreams] = useState<EngineScopedValue<ReadonlyArray<StreamSnapshot>>>(() =>
+    scopeToEngine(engine, []),
+  );
+  const [lastNetworkEvent, setLastNetworkEvent] = useState<EngineScopedValue<string | undefined>>(
+    () => scopeToEngine<string | undefined>(engine, undefined),
+  );
+  const [middlewareFlows, setMiddlewareFlows] = useState<
+    EngineScopedValue<ReadonlyArray<MiddlewareFlowEntry>>
+  >(() => scopeToEngine(engine, []));
+  const [plugins, setPlugins] = useState<EngineScopedValue<ReadonlyArray<PluginSnapshot>>>(() =>
+    scopeToEngine(engine, initializePlugins(engine, engine.getConnectionState())),
+  );
 
   useEffect(() => {
     let isMounted = true;
     const load = async (): Promise<void> => {
       const page = await engine.getConversations();
       if (!isMounted) return;
-      setConversations(page.items);
+      setConversations(scopeToEngine(engine, page.items));
       const messagePages = await Promise.all(
         page.items.map((conversation) => engine.getMessages({ conversationId: conversation.id })),
       );
       if (!isMounted) return;
       setMessages(
-        messagePages
-          .flatMap((result) => result.items)
-          .sort((left, right) => left.timestamp - right.timestamp),
+        scopeToEngine(
+          engine,
+          messagePages
+            .flatMap((result) => result.items)
+            .sort((left, right) => left.timestamp - right.timestamp),
+        ),
       );
     };
     void load();
@@ -306,71 +325,120 @@ export function useChatDevTools(
   }, [engine]);
 
   useEffect(() => {
-    setPlugins(initializePlugins(engine, engine.getConnectionState()));
-  }, [engine]);
-
-  useEffect(() => {
     const unsubs = CORE_EVENT_TYPES.map((eventType) =>
       engine.on(eventType, (event) => {
-        setEvents((current) => appendRingEntry(current, eventType, event, maxEvents));
-        setLastNetworkEvent(`${formatEventTime(event.timestamp)} ${eventType}`);
+        setEvents((current) =>
+          scopeToEngine(
+            engine,
+            appendRingEntry(
+              scopedValue(current, engine, EMPTY_EVENTS),
+              eventType,
+              event,
+              maxEvents,
+            ),
+          ),
+        );
+        setLastNetworkEvent(
+          scopeToEngine(engine, `${formatEventTime(event.timestamp)} ${eventType}`),
+        );
       }),
     );
 
     const customUnsub = engine.on('custom:*', (event) => {
-      setEvents((current) => appendRingEntry(current, 'custom:*', event, maxEvents));
-      setLastNetworkEvent(`${formatEventTime(Date.now())} custom:*`);
+      setEvents((current) =>
+        scopeToEngine(
+          engine,
+          appendRingEntry(scopedValue(current, engine, EMPTY_EVENTS), 'custom:*', event, maxEvents),
+        ),
+      );
+      setLastNetworkEvent(scopeToEngine(engine, `${formatEventTime(Date.now())} custom:*`));
     });
 
     const unsubsAll = [...unsubs, customUnsub];
 
     const unsubscribeConnection = engine.on('connection:state', (event) => {
-      setConnectionState(event.state);
-      setPlugins((current) => updatePluginLifecycle(current, event.state));
+      setConnectionState(scopeToEngine(engine, event.state));
+      setPlugins((current) =>
+        scopeToEngine(
+          engine,
+          updatePluginLifecycle(
+            scopedValue(current, engine, initializePlugins(engine, event.state)),
+            event.state,
+          ),
+        ),
+      );
     });
 
     const unsubscribeMessageSent = engine.on('message:sent', (event) => {
-      setMessages((current) => upsertMessage(current, event.message));
+      setMessages((current) =>
+        scopeToEngine(engine, upsertMessage(scopedValue(current, engine, []), event.message)),
+      );
       const steps = ['sendMessage()', ...middlewareNames(engine), 'transport.send()'];
       setMiddlewareFlows((current) => {
+        const currentFlows = scopedValue(current, engine, []);
         const next: MiddlewareFlowEntry = {
-          id: current.length + 1,
+          id: currentFlows.length + 1,
           timestamp: event.timestamp,
           messageId: event.message.id,
           conversationId: event.message.conversationId,
           steps,
         };
-        const merged = [...current, next];
-        return merged.length > 100 ? merged.slice(merged.length - 100) : merged;
+        const merged = [...currentFlows, next];
+        return scopeToEngine(
+          engine,
+          merged.length > 100 ? merged.slice(merged.length - 100) : merged,
+        );
       });
     });
 
     const unsubscribeMessageReceived = engine.on('message:received', (event) => {
-      setMessages((current) => upsertMessage(current, event.message));
+      setMessages((current) =>
+        scopeToEngine(engine, upsertMessage(scopedValue(current, engine, []), event.message)),
+      );
     });
 
     const unsubscribeMessageUpdated = engine.on('message:updated', (event) => {
-      setMessages((current) => upsertMessage(current, event.message));
+      setMessages((current) =>
+        scopeToEngine(engine, upsertMessage(scopedValue(current, engine, []), event.message)),
+      );
     });
 
     const unsubscribeMessageDeleted = engine.on('message:deleted', (event) => {
-      setMessages((current) => removeMessage(current, event.messageId));
+      setMessages((current) =>
+        scopeToEngine(engine, removeMessage(scopedValue(current, engine, []), event.messageId)),
+      );
     });
 
     const unsubscribeConversationCreated = engine.on('conversation:created', (event) => {
-      setConversations((current) => upsertConversation(current, event.conversation));
+      setConversations((current) =>
+        scopeToEngine(
+          engine,
+          upsertConversation(scopedValue(current, engine, []), event.conversation),
+        ),
+      );
     });
 
     const unsubscribeConversationUpdated = engine.on('conversation:updated', (event) => {
-      setConversations((current) => upsertConversation(current, event.conversation));
+      setConversations((current) =>
+        scopeToEngine(
+          engine,
+          upsertConversation(scopedValue(current, engine, []), event.conversation),
+        ),
+      );
     });
 
     const unsubscribeConversationDeleted = engine.on('conversation:deleted', (event) => {
-      setConversations((current) => removeConversation(current, event.conversationId));
+      setConversations((current) =>
+        scopeToEngine(
+          engine,
+          removeConversation(scopedValue(current, engine, []), event.conversationId),
+        ),
+      );
     });
 
     const unsubscribeStreamStart = engine.on('message:stream:start', (event) => {
       setStreams((current) => {
+        const currentStreams = scopedValue(current, engine, []);
         const nextStream: StreamSnapshot = {
           messageId: event.messageId,
           conversationId: event.conversationId,
@@ -380,16 +448,22 @@ export function useChatDevTools(
           accumulated: '',
           status: 'streaming',
         };
-        const withoutMessage = current.filter((stream) => stream.messageId !== event.messageId);
-        return [...withoutMessage, nextStream].sort(
-          (left, right) => right.lastUpdatedAt - left.lastUpdatedAt,
+        const withoutMessage = currentStreams.filter(
+          (stream) => stream.messageId !== event.messageId,
+        );
+        return scopeToEngine(
+          engine,
+          [...withoutMessage, nextStream].sort(
+            (left, right) => right.lastUpdatedAt - left.lastUpdatedAt,
+          ),
         );
       });
     });
 
     const unsubscribeStreamChunk = engine.on('message:stream:chunk', (event) => {
       setStreams((current) => {
-        const existing = current.find((stream) => stream.messageId === event.messageId);
+        const currentStreams = scopedValue(current, engine, []);
+        const existing = currentStreams.find((stream) => stream.messageId === event.messageId);
         if (!existing) {
           return current;
         }
@@ -400,16 +474,22 @@ export function useChatDevTools(
           accumulated: event.accumulated,
           status: 'streaming',
         };
-        return current
-          .map((stream) => (stream.messageId === event.messageId ? updated : stream))
-          .sort((left, right) => right.lastUpdatedAt - left.lastUpdatedAt);
+        return scopeToEngine(
+          engine,
+          currentStreams
+            .map((stream) => (stream.messageId === event.messageId ? updated : stream))
+            .sort((left, right) => right.lastUpdatedAt - left.lastUpdatedAt),
+        );
       });
     });
 
     const unsubscribeStreamEnd = engine.on('message:stream:end', (event) => {
-      setMessages((current) => upsertMessage(current, event.message));
+      setMessages((current) =>
+        scopeToEngine(engine, upsertMessage(scopedValue(current, engine, []), event.message)),
+      );
       setStreams((current) => {
-        const nextStreams = current.map((stream): StreamSnapshot => {
+        const currentStreams = scopedValue(current, engine, []);
+        const nextStreams = currentStreams.map((stream): StreamSnapshot => {
           if (
             stream.messageId !== event.message.id ||
             stream.conversationId !== event.message.conversationId
@@ -423,13 +503,17 @@ export function useChatDevTools(
             status: 'ended',
           };
         });
-        return nextStreams.sort((left, right) => right.lastUpdatedAt - left.lastUpdatedAt);
+        return scopeToEngine(
+          engine,
+          nextStreams.sort((left, right) => right.lastUpdatedAt - left.lastUpdatedAt),
+        );
       });
     });
 
     const unsubscribeStreamError = engine.on('message:stream:error', (event) => {
       setStreams((current) => {
-        const nextStreams = current.map((stream): StreamSnapshot => {
+        const currentStreams = scopedValue(current, engine, []);
+        const nextStreams = currentStreams.map((stream): StreamSnapshot => {
           if (
             stream.messageId !== event.messageId ||
             stream.conversationId !== event.conversationId
@@ -444,7 +528,10 @@ export function useChatDevTools(
             error: event.error.message,
           };
         });
-        return nextStreams.sort((left, right) => right.lastUpdatedAt - left.lastUpdatedAt);
+        return scopeToEngine(
+          engine,
+          nextStreams.sort((left, right) => right.lastUpdatedAt - left.lastUpdatedAt),
+        );
       });
     });
 
@@ -465,19 +552,35 @@ export function useChatDevTools(
     };
   }, [engine, maxEvents]);
 
+  const currentConnectionState = scopedValue(connectionState, engine, engine.getConnectionState());
+  const currentEvents = scopedValue(events, engine, EMPTY_EVENTS);
+  const currentMessages = scopedValue(messages, engine, []);
+  const currentConversations = scopedValue(conversations, engine, []);
+  const currentStreams = scopedValue(streams, engine, []);
+  const currentLastNetworkEvent = scopedValue<string | undefined>(
+    lastNetworkEvent,
+    engine,
+    undefined,
+  );
+  const currentMiddlewareFlows = scopedValue(middlewareFlows, engine, []);
+  const currentPlugins = useMemo(
+    () => scopedValue(plugins, engine, initializePlugins(engine, currentConnectionState)),
+    [currentConnectionState, engine, plugins],
+  );
+
   const transport = useMemo(
-    () => transportSnapshot(engine, connectionState, lastNetworkEvent),
-    [connectionState, engine, lastNetworkEvent],
+    () => transportSnapshot(engine, currentConnectionState, currentLastNetworkEvent),
+    [currentConnectionState, currentLastNetworkEvent, engine],
   );
 
   return {
-    connectionState,
-    events: events.events,
-    messages,
-    conversations,
-    streams,
+    connectionState: currentConnectionState,
+    events: currentEvents.events,
+    messages: currentMessages,
+    conversations: currentConversations,
+    streams: currentStreams,
     transport,
-    plugins,
-    middlewareFlows,
+    plugins: currentPlugins,
+    middlewareFlows: currentMiddlewareFlows,
   };
 }
