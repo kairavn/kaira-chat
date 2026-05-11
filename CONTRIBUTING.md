@@ -19,8 +19,8 @@ packages/
   chat-provider-dit
   eslint-config
   typescript-config
-docs/internal/
-  Internal architecture, status, workflow, and safety docs
+docs/
+  Implementation guidance, architecture, standards, and status docs
 ```
 
 Use `apps/` for runnable applications and `packages/` for importable libraries.
@@ -30,11 +30,11 @@ Use `apps/` for runnable applications and `packages/` for importable libraries.
 When docs and code disagree, use this order:
 
 1. Code, package manifests, route handlers, tests, and workflow config
-2. `docs/internal/feature-status.json` and generated internal docs
+2. `docs/feature-status.json` and generated top-level docs (`docs/*.md`)
 3. Consumer docs in `apps/docs`
 4. Package and app `README.md` files
 
-See [docs/internal/README.md](./docs/internal/README.md) for the internal docs map.
+Start with [`docs/project-overview-pdr.md`](./docs/project-overview-pdr.md) for an overview of the project structure and guidance links.
 
 ## Core workflow
 
@@ -113,7 +113,7 @@ Current rules are defined in `.syncpackrc.json`:
 
 See also:
 
-- [docs/internal/README.md](./docs/internal/README.md)
-- [docs/internal/AGENT_GUIDE.md](./docs/internal/AGENT_GUIDE.md)
-- [docs/internal/ENGINEERING_WORKFLOW.md](./docs/internal/ENGINEERING_WORKFLOW.md)
-- [docs/internal/IMPLEMENTATION_STATUS.md](./docs/internal/IMPLEMENTATION_STATUS.md)
+- [docs/project-overview-pdr.md](./docs/project-overview-pdr.md) — project scope and package overview
+- [docs/code-standards.md](./docs/code-standards.md) — safe edit boundaries and implementation conventions
+- [docs/deployment-guide.md](./docs/deployment-guide.md) — release and deployment workflows
+- [docs/implementation-status.md](./docs/implementation-status.md) — feature status and evidence

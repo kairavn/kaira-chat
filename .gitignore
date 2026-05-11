@@ -42,3 +42,6 @@ yarn-error.log*
 
 .cursor/
 .codex/
+
+# Agent session artifacts (plans, reports, scratch)
+plans/

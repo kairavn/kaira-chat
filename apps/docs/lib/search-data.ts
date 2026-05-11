@@ -12,7 +12,7 @@ export interface SearchResult {
 
 /**
  * Auto-generated search index from MDX page files.
- * Updated: 2026-04-24
+ * Updated: 2026-05-11
  */
 export const SEARCH_DATA: SearchResult[] = [
   {

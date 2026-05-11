@@ -1,12 +1,9 @@
 {
   "meta": {
     "canonicalVersion": 1,
-    "generatedAt": "2026-04-24",
-    "sourceOfTruth": "docs/internal/feature-status.json",
-    "generatedOutputs": [
-      "docs/internal/IMPLEMENTATION_STATUS.md",
-      "docs/internal/FEATURE_MATRIX.md"
-    ],
+    "generatedAt": "2026-05-11",
+    "sourceOfTruth": "docs/feature-status.json",
+    "generatedOutputs": ["docs/implementation-status.md", "docs/feature-matrix.md"],
     "statusVocabulary": {
       "implemented": "A source-backed concrete implementation exists and is reachable through exports, runtime code, or an active workflow.",
       "partial": "A concrete path exists but is incomplete, latent, or only partly wired.",
@@ -32,7 +29,7 @@
       "Every entry must cite one to three evidence paths from code, config, tests, or workflow files.",
       "Consumer docs in apps/docs and README files may support a note, but they must never be the sole evidence.",
       "Partial and missing entries must explain the concrete gap or latent wiring.",
-      "IMPLEMENTATION_STATUS.md and FEATURE_MATRIX.md are generated views and must stay in sync with this file."
+      "implementation-status.md and feature-matrix.md are generated views and must stay in sync with this file."
     ]
   },
   "entries": [
@@ -506,17 +503,13 @@
     {
       "id": "internal-docs-status-system",
       "category": "Docs & Tooling",
-      "feature": "Internal feature status system",
+      "feature": "Feature status system",
       "surfaceType": "internal-docs",
-      "ownerArea": "docs/internal",
+      "ownerArea": "docs/",
       "publicSurface": false,
       "status": "implemented",
       "backing": "concrete",
-      "evidence": [
-        "docs/internal/feature-status.json",
-        "docs/internal/IMPLEMENTATION_STATUS.md",
-        "scripts/render-feature-status.mjs"
-      ],
+      "evidence": ["docs/feature-status.json", "scripts/render-feature-status.mjs"],
       "notes": "The canonical source lives in JSON and generates the markdown views to reduce drift between status documents.",
       "roadmapCandidate": false
     },

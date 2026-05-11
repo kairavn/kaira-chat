@@ -18,11 +18,16 @@ TypeScript and React monorepo for the Kaira chat SDK, an internal demo app, and 
 - `apps/docs` - consumer-facing SDK documentation site.
 - `apps/web` - internal demo app and Next.js proxy layer for the DIT-backed runtime.
 
-## Internal docs
+## Documentation
 
-- [Internal docs index](./docs/internal/README.md)
-- [Agent guide](./docs/internal/AGENT_GUIDE.md)
-- [Implementation status](./docs/internal/IMPLEMENTATION_STATUS.md)
+- [Project overview & PDR](./docs/project-overview-pdr.md) — mission, scope, packages, acceptance criteria
+- [Design guidelines](./docs/design-guidelines.md) — transport-first rationale, extensibility model
+- [System architecture](./docs/system-architecture.md) — runtime model, state machines, data flow
+- [Code standards](./docs/code-standards.md) — conventions, safe edit boundaries, validation rules
+- [Testing strategy](./docs/testing-strategy.md) — coverage expectations, validation by surface
+- [Deployment guide](./docs/deployment-guide.md) — release, CI/CD, environment setup
+- [Implementation status](./docs/implementation-status.md) — generated feature status view (see feature-status.json)
+- [Codebase summary](./docs/codebase-summary.md) — monorepo layout and package roles
 
 ## Quick start
 
@@ -45,10 +50,18 @@ pnpm validate
 
 ## Workflow notes
 
-- Source of truth order: code/config/tests/workflows first, then `docs/internal`, then `apps/docs`, then README files.
-- Consumer documentation lives in `apps/docs`. Do not use it as the source of truth for internal implementation status.
-- Internal implementation guidance, status tracking, and repo safety notes live in `docs/internal/`.
-- Contribution, dependency, and release process notes live in [CONTRIBUTING.md](./CONTRIBUTING.md) and [docs/internal/ENGINEERING_WORKFLOW.md](./docs/internal/ENGINEERING_WORKFLOW.md).
+**Source of truth order** (use when docs and code disagree):
+
+1. Code, package manifests, route handlers, tests, workflow config
+2. Top-level docs (`docs/*.md`) and feature-status.json
+3. Consumer docs in `apps/docs`
+4. Package and app `README.md` files
+
+**Documentation hierarchy:**
+
+- **Consumer docs** (`apps/docs`): for SDK users and integrators
+- **Implementation docs** (`docs/`): for engineers and agents working in the monorepo
+- **Contribution & release**: [CONTRIBUTING.md](./CONTRIBUTING.md) and [deployment-guide.md](./docs/deployment-guide.md)
 
 ## License
 

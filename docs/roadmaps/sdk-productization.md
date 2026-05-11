@@ -75,7 +75,7 @@ Deliverables:
 
 - activate `.github/workflows/release.yml` for the intended `main` branch publish flow
 - make the workflow logic match its trigger conditions so the release job can actually run
-- document required release secrets and preconditions in internal workflow docs
+- document required release secrets and preconditions in `docs/deployment-guide.md`
 - verify the Changesets path remains the single release mechanism for public packages
 
 Affected areas:
@@ -83,7 +83,7 @@ Affected areas:
 - `.github/workflows/release.yml`
 - `.changeset/config.json`
 - root `package.json`
-- `docs/internal/ENGINEERING_WORKFLOW.md`
+- `docs/deployment-guide.md`
 - `CONTRIBUTING.md` if release instructions drift from workflow reality
 
 Acceptance criteria:
@@ -121,7 +121,7 @@ Affected areas:
 - `apps/docs/lib/generate-search-data.ts`
 - `apps/docs/lib/search-data.ts`
 - `apps/docs/lib/generate-search-data.test.ts`
-- `docs/internal/ENGINEERING_WORKFLOW.md`
+- `docs/deployment-guide.md`
 
 Acceptance criteria:
 
@@ -243,7 +243,7 @@ Primary implementation areas:
 - `packages/chat-react`
 - `packages/chat-devtools`
 - new first-party extensibility packages under `packages/`
-- internal workflow and status docs
+- top-level docs (`docs/deployment-guide.md`, `docs/implementation-status.md`, `docs/feature-matrix.md`)
 
 Secondary areas:
 
@@ -280,8 +280,8 @@ Expected implementation hotspots for this roadmap:
 - `packages/chat-react`
 - `packages/chat-devtools`
 - new packages under `packages/` for middleware and plugin references
-- `docs/internal/ENGINEERING_WORKFLOW.md`
-- `docs/internal/IMPLEMENTATION_STATUS.md` and `docs/internal/FEATURE_MATRIX.md` if feature status changes
+- `docs/deployment-guide.md`
+- `docs/implementation-status.md` and `docs/feature-matrix.md` if feature status changes
 - `CONTRIBUTING.md` only if contributor-facing instructions drift from actual workflow behavior
 
 ## Summary

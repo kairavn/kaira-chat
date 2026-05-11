@@ -1,8 +1,8 @@
 # Testing Strategy
 
-This file describes the current automated coverage and the practical validation expected for future changes.
+This document describes the current automated coverage and the practical validation expected for future changes.
 
-## Current coverage by surface
+## Current Coverage by Surface
 
 | Surface                           | Current coverage                                  | Evidence                                                                                          |
 | --------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -16,16 +16,16 @@ This file describes the current automated coverage and the practical validation 
 | `apps/web`                        | targeted route, runtime, and integration coverage | `apps/web/app/api/**/*.test.ts`, `apps/web/lib/**/*.test.ts`, `apps/web/components/**/*.test.tsx` |
 | `apps/docs`                       | lightweight search-integrity coverage             | `apps/docs/lib/generate-search-data.test.ts`                                                      |
 
-## Weakly tested or untested areas
+## Weakly Tested or Untested Areas
 
 - Remaining React/UI edge cases outside the current high-signal hook and primitive suites
 - Deeper renderer coverage beyond the current fallback and composer-focused paths
 - Demo app API routes, server singleton runtime, and browser-server integration
 - Broader docs navigation coverage beyond the current search index integrity checks
 
-## Practical validation guidance
+## Practical Validation Guidance
 
-### Core runtime changes
+### Core Runtime Changes
 
 When changing `packages/chat-core`:
 
@@ -42,7 +42,7 @@ Pay special attention to:
 - middleware and plugin lifecycle ordering
 - stream helper behavior
 
-### Transport or adapter changes
+### Transport or Adapter Changes
 
 When changing `packages/chat-transport-polling`, `packages/chat-transport-websocket`, or `packages/chat-provider-dit`:
 
@@ -50,7 +50,7 @@ When changing `packages/chat-transport-polling`, `packages/chat-transport-websoc
 - run `pnpm build`
 - re-check any affected `chat-core` assumptions if transport event shapes changed
 
-### React, UI, or devtools changes
+### React, UI, or Devtools Changes
 
 When changing `packages/chat-react`, `packages/chat-ui`, or `packages/chat-devtools`:
 
@@ -61,7 +61,7 @@ When changing `packages/chat-react`, `packages/chat-ui`, or `packages/chat-devto
 
 Current repo policy should continue to favor high-signal tests over presentational component tests.
 
-### Demo app changes
+### Demo App Changes
 
 When changing `apps/web`:
 
@@ -78,15 +78,9 @@ Validate these paths when relevant:
 - `/api/demos/[demoId]/conversation`
 - `/api/chat/messages`, `/api/chat/events`, and `/api/chat/conversation` only when validating the legacy DIT compatibility wrappers
 
-High-signal coverage should stay focused on route behavior, runtime integration,
-and critical demo flows. The persistence demo now has a dedicated jsdom
-integration test in `apps/web/components/demo/PersistenceDemo.test.tsx` that
-verifies the selected thread restores after a simulated reload without leaking
-another thread's seeded history into the restored view. `apps/web/components/demo/DemoRuntimeProvider.test.tsx`
-also covers runtime reuse and reconnect readiness when the derived runtime key
-changes.
+High-signal coverage should stay focused on route behavior, runtime integration, and critical demo flows. The persistence demo now has a dedicated jsdom integration test in `apps/web/components/demo/PersistenceDemo.test.tsx` that verifies the selected thread restores after a simulated reload without leaking another thread's seeded history into the restored view. `apps/web/components/demo/DemoRuntimeProvider.test.tsx` also covers runtime reuse and reconnect readiness when the derived runtime key changes.
 
-### Docs changes
+### Docs Changes
 
 When changing `apps/docs` or internal docs:
 
@@ -95,13 +89,13 @@ When changing `apps/docs` or internal docs:
 - run `pnpm build`
 - verify that `apps/docs/lib/search-data.ts` still matches the authored docs pages if MDX content changed
 
-Vitest 4 note:
+## Vitest 4 Conventions
 
 - `--runInBand` is not a valid Vitest CLI flag in this repo's current toolchain
 - prefer file filtering such as `pnpm --filter web test -- DemoRuntimeProvider.test.tsx`
 - use `--no-file-parallelism` only when you explicitly need serial file execution
 
-## What to validate before modifying key areas
+## What to Validate Before Modifying Key Areas
 
 - Core runtime: event contracts, message lifecycle, storage integration, streaming helpers
 - React runtime: provider lifecycle, hook assumptions, optimistic reconciliation
@@ -109,8 +103,8 @@ Vitest 4 note:
 - Demo app: client polling behavior, server proxy behavior, env expectations, demo-only assumptions
 - Docs: authored content drift, generated search index drift, consumer-vs-internal docs separation
 
-See also:
+## Related Documentation
 
-- [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
-- [FEATURE_MATRIX.md](./FEATURE_MATRIX.md)
-- [ENGINEERING_WORKFLOW.md](./ENGINEERING_WORKFLOW.md)
+- [`./code-standards.md`](./code-standards.md) — validation rules, CI gates, test structure
+- [`./system-architecture.md`](./system-architecture.md) — runtime model, state machines, streaming lifecycle
+- [`./codebase-summary.md`](./codebase-summary.md) — package roles and directory structure
